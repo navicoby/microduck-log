@@ -86,6 +86,11 @@
   .shots img{width:100%;border:1px solid var(--line);border-radius:5px;display:block}
   .clips{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:14px 0 0}
   .clips video{width:100%;border:1px solid var(--line);border-radius:6px;background:#000;display:block}
+  .dia{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:18px 16px;margin:14px 0 0;overflow-x:auto}
+  .dia .mermaid{text-align:center}
+  .dia > .cap{font-size:13px;color:var(--mut);margin:0 0 12px;line-height:1.6}
+  .dia > .cap b{color:var(--ink)}
   .setup{display:grid;grid-template-columns:4.2rem 1fr;gap:12px;margin:12px 0 0;
     font-size:13.4px;align-items:baseline;border-top:1px dashed var(--line);padding-top:10px}
   .setup > b{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -227,6 +232,94 @@
   <div class="setup"><b>설정</b><span>PPO · <code>StandUp-Flat</code> 5,000회차 결과<br>평가는 <code>recov_eval.sh</code> 체인. 넘어진 자세를 고정 조건으로 지정하고 일어서서 <b>버티는 것까지</b> 성공으로 셈. 채점기 수정 후 원자료는 그대로 두고 재채점 도구를 따로 만듦.</span></div>
 </article>
 
+
+<h2>코드가 어떻게 도는가</h2>
+
+<div class="dia">
+  <p class="cap"><b>1 · 한 번의 학습 실행</b> — 스크립트 하나가 학습부터 평가·영상·기록까지 이어서 돌립니다. 빨간 지점이 실제로 끊겼던 곳입니다.</p>
+<pre class="mermaid">
+flowchart TD
+  A["jump_stand_run.sh&lt;br/&gt;TASK · TAG · LOAD_RUN · LOAD_CK · ITERS"] --> B["mjlab 환경 조립&lt;br/&gt;관측·보상·이벤트·커리큘럼 매니저"]
+  B --> C["rsl-rl PPO 학습&lt;br/&gt;2048 환경 × 24 스텝"]
+  C --> D["체크포인트 250회마다&lt;br/&gt;model_N.pt"]
+  C --> E["TensorBoard 이벤트"]
+  D --> F["ONNX 내보내기&lt;br/&gt;정규화기 포함"]
+  D --> G["평가기&lt;br/&gt;신호 1536회 · 고정 조건"]
+  G --> H["결과 CSV · 매니페스트"]
+  D --> I["재생 영상 녹화"]
+  H --> J["보고서 · 일지 항목"]
+  I --> J
+  C -. "세션 종료 시 사망" .-> X1["학습 중단&lt;br/&gt;13205 · 6512 회차"]
+  C -. "실행 중 스크립트 덮어씀" .-> X2["후처리 전체 유실"]
+  style X1 fill:#f6e5e5,stroke:#a33f3f
+  style X2 fill:#f6e5e5,stroke:#a33f3f
+</pre>
+</div>
+
+<div class="dia">
+  <p class="cap"><b>2 · 비대칭 액터-크리틱</b> — 크리틱만 특권 정보를 봅니다. 실기에 올라가는 것은 액터뿐이라, 액터 관측에 시뮬레이터 전용 값이 섞이면 배포가 불가능해집니다.</p>
+<pre class="mermaid">
+flowchart LR
+  subgraph OBS["관측"]
+    direction TB
+    P["고유수용 48&lt;br/&gt;각속도 3 · 중력투영 3&lt;br/&gt;관절위치 14 · 관절속도 14&lt;br/&gt;직전행동 14"]
+    C2["명령 13&lt;br/&gt;속도 3 · 머리자세 4 · 몸통자세 6"]
+    PR["특권 15&lt;br/&gt;시뮬레이터 전용"]
+  end
+  P --> AC["액터 61&lt;br/&gt;512-256-128 ELU"]
+  C2 --> AC
+  P --> CR["크리틱 76&lt;br/&gt;512-256-128 ELU"]
+  C2 --> CR
+  PR --> CR
+  AC --> ACT["행동 14&lt;br/&gt;가우시안 · 스칼라 표준편차"]
+  CR --> V["가치 1"]
+  ACT --> ONNX["ONNX 내보내기&lt;br/&gt;실기 배포"]
+  V -. "학습에만 사용" .-> PPO["PPO 업데이트"]
+  ACT --> PPO
+  style PR fill:#f8f1e8,stroke:#a8642a
+  style ONNX fill:#eaf0ea,stroke:#2f7d5a
+</pre>
+</div>
+
+<div class="dia">
+  <p class="cap"><b>3 · 커리큘럼이 끝나는 시점</b> — 일곱 개 커리큘럼 항이 전부 2,000회차에서 최종 단계에 도달합니다. 그 뒤로 과제는 고정입니다. 후반 퇴행을 해석할 때 이 경계가 중요합니다.</p>
+<pre class="mermaid">
+flowchart LR
+  S["0 회차&lt;br/&gt;학습 시작"] --> R["램프 구간&lt;br/&gt;0 to 2000&lt;br/&gt;머리자세 5단계 · 질량중심 ±15mm&lt;br/&gt;행동변화율 · 정지환경 비율"]
+  R --> F["2000 회차&lt;br/&gt;모든 커리큘럼 종료"]
+  F --> ST["고정 과제 구간&lt;br/&gt;2000 이후"]
+  ST --> REG["6000 회차 퇴행&lt;br/&gt;낙상률 34 to 38 퍼센트"]
+  REG --> Q["과제는 안 변했는데 왜 나빠지나&lt;br/&gt;낙상 벌점이 없어서 넘어져도 손해가 없다"]
+  style REG fill:#f6e5e5,stroke:#a33f3f
+  style Q fill:#f8f1e8,stroke:#a8642a
+</pre>
+</div>
+
+<div class="dia">
+  <p class="cap"><b>4 · 점프를 배웠다가 버린 구조</b> — 이 프로젝트에서 가장 중요한 인과입니다. 보상 설계가 만든 국소 최적입니다.</p>
+<pre class="mermaid">
+flowchart TD
+  T["점프 과제&lt;br/&gt;낙상 벌점 -500 고정"] --> E1["탐색 초기&lt;br/&gt;뛰면 거의 항상 넘어진다"]
+  E1 --> R1["기대 보상&lt;br/&gt;뛴다 = 큰 음수"]
+  E1 --> R2["기대 보상&lt;br/&gt;안 뛴다 = 0 근처"]
+  R1 --> D["정책 선택&lt;br/&gt;안 뛰는 쪽이 이득"]
+  R2 --> D
+  D --> EN["엔트로피 붕괴&lt;br/&gt;14차원에서 -10.2&lt;br/&gt;탐색이 죽는다"]
+  EN --> N["오래 돌려도 새 동작이 안 나온다"]
+  T --> O["관측된 실제 궤적"]
+  O --> O1["17798 회차 뛰기 시작"]
+  O1 --> O2["18551 회차 다시 안 뛰기로 후퇴"]
+  N --> FIX["처방"]
+  O2 --> FIX
+  FIX --> F1["착지를 먼저 가르친다"]
+  FIX --> F2["벌점을 0에서 단계적으로 올린다"]
+  FIX --> F3["초기에 위로 당기는 보조력을 주고 줄인다"]
+  style D fill:#f6e5e5,stroke:#a33f3f
+  style EN fill:#f6e5e5,stroke:#a33f3f
+  style FIX fill:#eaf0ea,stroke:#2f7d5a
+</pre>
+</div>
+
 <h2>점프 결과 요약</h2>
 <div class="scroll">
 <table>
@@ -290,5 +383,18 @@
 </footer>
 
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.1/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "base",
+    themeVariables: {
+      background: "#f6f8f6", primaryColor: "#eef1ee", primaryTextColor: "#17201c",
+      primaryBorderColor: "#d6ded8", lineColor: "#57635c", fontSize: "13px",
+      fontFamily: "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif"
+    },
+    flowchart: { htmlLabels: true, curve: "basis", padding: 12 }
+  });
+</script>
 </body>
 </html>
