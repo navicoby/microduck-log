@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MicroDuck 훈련일지</title>
+<meta name="description" content="이족보행 로봇 MicroDuck의 강화학습 훈련 기록 — 무엇을 시도했고 무엇이 나왔는지, 실패와 정정까지 날짜별로.">
+<style>
+  :root{
+    --bg:#eef1ee; --panel:#f6f8f6; --ink:#17201c; --mut:#57635c; --line:#d6ded8;
+    --accent:#2f7d5a; --accent-ink:#245f45;
+    --warn:#a8642a; --warn-bg:#f8f1e8; --fail:#a33f3f;
+    color-scheme:light;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .mono,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .wrap{width:100%;max-width:780px;margin:0 auto;padding:clamp(40px,8vh,80px) clamp(22px,6vw,40px) 80px}
+
+  .eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 14px}
+  h1{font-size:clamp(28px,5.6vw,40px);line-height:1.1;letter-spacing:-.025em;font-weight:680;
+    margin:0 0 16px;text-wrap:balance}
+  .lede{font-size:clamp(15px,2.2vw,17px);color:var(--mut);margin:0 0 10px;max-width:58ch}
+  header{border-bottom:2px solid var(--line);padding-bottom:26px;margin-bottom:34px}
+
+  h2{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--mut);font-weight:600;
+    margin:44px 0 16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+
+  .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;font-size:14px;margin:0}
+  .spec dt{color:var(--mut);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+  .spec dd{margin:0}
+
+  .day{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:18px 20px;margin-bottom:12px}
+  .day > .date{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+    letter-spacing:.1em;color:var(--accent-ink);margin:0 0 4px}
+  .day > h3{font-size:17px;font-weight:650;margin:0 0 12px;letter-spacing:-.01em;text-wrap:balance}
+  .day p{margin:0 0 10px}
+  .day p:last-child{margin-bottom:0}
+  .did,.got,.learn{display:grid;grid-template-columns:4.2rem 1fr;gap:12px;margin:0 0 9px;
+    font-size:14.6px;align-items:baseline}
+  .did > b,.got > b,.learn > b{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;
+    color:var(--mut);padding-top:2px}
+  .got > b{color:var(--accent-ink)}
+  .learn > b{color:var(--warn)}
+  .learn{background:var(--warn-bg);border-radius:5px;padding:9px 11px;margin-left:-11px;margin-right:-11px}
+  .fail{color:var(--fail);font-weight:600}
+  .ok{color:var(--accent-ink);font-weight:600}
+
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:14px 0}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+  th{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  .scroll{overflow-x:auto}
+
+  ol.traps{padding-left:0;list-style:none;counter-reset:t;margin:0}
+  ol.traps li{counter-increment:t;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:14px 18px 14px 52px;margin-bottom:8px;position:relative;font-size:14.8px}
+  ol.traps li::before{content:counter(t);position:absolute;left:18px;top:14px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+    color:var(--accent-ink);font-weight:600}
+  ol.traps b{display:block;margin-bottom:3px}
+
+  code{background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px;font-size:.88em}
+  a{color:var(--accent-ink)}
+  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);
+    color:var(--mut);font-size:13px}
+  @media (max-width:520px){
+    .did,.got,.learn{grid-template-columns:1fr;gap:2px}
+    .learn{margin-left:0;margin-right:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Training Log</p>
+  <h1>MicroDuck 강화학습 훈련일지</h1>
+  <p class="lede">작은 이족보행 로봇을 시뮬레이터 안에서 걷고, 앉았다 일어서고, 뛰어오르게 만들려고 9일 동안 한 일의 기록입니다.</p>
+  <p class="lede">성공한 것보다 실패한 것이 많습니다. 그대로 적었습니다. 같은 걸 시도하는 분이 같은 벽에 다시 부딪히지 않도록, <b>무엇을 했고 무엇이 나왔는지</b>와 <b>어떤 측정이 틀렸는지</b>를 함께 남깁니다. 원자료와 체크포인트는 싣지 않았습니다.</p>
+</header>
+
+<h2>환경</h2>
+<dl class="spec">
+  <dt>로봇</dt><dd>MicroDuck — 소형 이족보행 플랫폼, 14자유도</dd>
+  <dt>시뮬레이터</dt><dd>MuJoCo 3.10 + mujoco-warp 3.8 (GPU 배치 물리)</dd>
+  <dt>프레임워크</dt><dd>mjlab 1.3 · rsl-rl 5.0 (PPO)</dd>
+  <dt>하드웨어</dt><dd>RTX 4080 Laptop 12GB · i9-13900HX · WSL2 Ubuntu 24.04</dd>
+  <dt>상위 코드</dt><dd><a href="https://github.com/pollen-robotics/microduck_rl">pollen-robotics/microduck_rl</a> (커밋 고정)</dd>
+</dl>
+<p style="font-size:14.5px;color:var(--mut);margin-top:14px">왜 WSL2인가. 취향이 아닙니다. 상위 저장소의 잠금파일이 CUDA 의존성을 리눅스에만 걸어두어, 네이티브 윈도우에 설치하면 CPU 전용 파이토치로 해석되고 GPU 선택 단계에서 죽습니다. 저장소는 WSL 파일시스템 안에 두어야 합니다. <code>/mnt/c</code>에 두면 파일 입출력이 크게 느려집니다.</p>
+
+<h2>날짜별 기록</h2>
+
+<article class="day">
+  <p class="date">2026-09-01</p>
+  <h3>환경 구축과 첫 실행</h3>
+  <div class="did"><b>한 일</b><span>설치, GPU 경로 확인, 5회 반복짜리 짧은 실행 다섯 개, 한 시간 연속 열 테스트.</span></div>
+  <div class="got"><b>결과</b><span>1시간에 1,250회 반복. 온도와 처리량이 안정적. 학습을 걸어도 되는 상태 확인.</span></div>
+  <div class="learn"><b>교훈</b><span>본 실험 전에 한 시간짜리 연속 실행을 반드시 해보십시오. 노트북 GPU는 발열로 처리량이 떨어지는데, 5분 실행으로는 보이지 않습니다.</span></div>
+</article>
+
+<article class="day">
+  <p class="date">2026-09-02</p>
+  <h3>평지 보행 기준선, 그리고 후반 퇴행</h3>
+  <div class="did"><b>한 일</b><span>속도추종 평지 과제를 두 시드로 학습(각 6,000회 내외), 한 시드는 9,500회까지 연장. 험지 과제는 웜스타트로 18,249회 완주.</span></div>
+  <div class="got"><b>결과</b><span>험지는 완주했고 최종 평균 보상 100.21. 그런데 평지에서 <span class="fail">후반에 성능이 나빠지는 현상</span>을 발견했습니다. 6,000회차 체크포인트의 낙상률이 34~38%로, 그 전 체크포인트보다 나빴습니다.</span></div>
+  <div class="learn"><b>교훈</b><span>마지막 체크포인트가 최선이라고 가정하지 마십시오. 체크포인트마다 실제로 평가해야 압니다. 원인으로 추정한 메커니즘은 기록만 해두고 검증되지 않았다고 명시했습니다.</span></div>
+</article>
+
+<article class="day">
+  <p class="date">2026-09-03</p>
+  <h3>계단 한계 측정, 점프 타당성, 그리고 같은 날의 정정</h3>
+  <div class="did"><b>한 일</b><span>계단 높이를 바꿔가며 넘을 수 있는 한계를 쟀습니다. 점프가 물리적으로 가능한지 계산했습니다. 앉았다 일어서기 과제를 새로 열었습니다.</span></div>
+  <div class="got"><b>결과</b><span>계단은 실용 한계가 <b>약 1cm</b>였습니다(낙상률 40% 미만 기준). 원인은 학습 커리큘럼의 계단 범위였습니다. 앉았다 일어서기는 13,000회차에서 한 사이클 성공률 66.4%.</span></div>
+  <div class="learn"><b>교훈</b><span>점프 상한을 <b>0.91cm로 계산했다가 같은 날 밤에 틀렸음을 발견</b>했습니다. 기준점을 발목에 두고 계산했는데 실제로는 발끝이 지면을 미는 지점이었습니다. 다시 계산하니 낙관적 상한이 4~6cm였습니다. 틀린 값을 지우지 않고 정정 항목을 새로 추가했습니다.</span></div>
+</article>
+
+<article class="day">
+  <p class="date">2026-09-04</p>
+  <h3>제자리 점프는 안 되고, 달리다 뛰는 건 됐다</h3>
+  <div class="did"><b>한 일</b><span>제자리 점프를 8,000회까지 학습. 실패 후 보상 설계를 바꾼 2판. 동시에 달리면서 뛰는 과제를 병행.</span></div>
+  <div class="got"><b>결과</b><span>제자리 점프는 <span class="fail">8,000회까지 이륙 자체가 없었습니다.</span> 반면 달리기 점프에서는 <span class="ok">처음으로 측정 가능한 도약</span>이 나왔습니다. 깨끗한 점프 11%, 평균 상승 0.63cm.</span></div>
+  <div class="learn"><b>교훈</b><span>정책의 엔트로피를 보십시오. 14차원 행동공간에서 엔트로피가 −10.2까지 떨어져 있었습니다. 탐색이 죽은 상태라 아무리 오래 돌려도 새 동작이 나오지 않습니다. 오래 돌리는 게 답이 아닐 때가 있습니다.</span></div>
+</article>
+
+<article class="day">
+  <p class="date">2026-09-05</p>
+  <h3>기준 궤적은 뜨지만 넘어진다 — 핵심 진단</h3>
+  <div class="did"><b>한 일</b><span>웅크렸다 발끝으로 차는 기준 궤적을 직접 만들어 개루프로 재생했습니다. 그 궤적을 참고 신호로 준 4판을 학습했습니다.</span></div>
+  <div class="got"><b>결과</b><span>기준 궤적은 <span class="ok">실제로 떴습니다.</span> 체공 86밀리초, 높이 4.75cm. 그런데 <span class="fail">100% 넘어졌습니다.</span> 달리기 3판은 깨끗한 점프 17%(주행 조건 22%), 최대 4.1cm로 최고 기록. 제자리 4판은 17,798회차에서 뛰기 시작했다가 18,551회차에서 <span class="fail">다시 안 뛰기로 후퇴</span>했습니다.</span></div>
+  <div class="learn"><b>교훈</b><span>이 프로젝트에서 가장 중요한 발견입니다. 낙상 벌점이 −500인 상태에서, 정책은 뛰면 넘어지니까 <b>뛰기를 포기하는 쪽이 이득</b>이라고 학습했습니다. 뛰는 법을 못 배운 게 아니라 배웠다가 버린 겁니다. 처방은 순서를 바꾸는 것입니다. <b>착지를 먼저 가르치고 그다음에 점프를 가르친다.</b></span></div>
+</article>
+
+<article class="day">
+  <p class="date">2026-09-06</p>
+  <h3>보행 미세조정 A/B와 카메라 학습 경로 준비</h3>
+  <div class="did"><b>한 일</b><span>속도추종 보상 커널의 폭을 좁힌 미세조정을 대조군과 A/B로 비교했습니다. 별도로 단안 카메라만 쓰는 학생 정책 인터페이스를 만들었습니다.</span></div>
+  <div class="got"><b>결과</b><span><span class="fail">가설 기각.</span> 추종 성능이 좋아지지 않았고, 오히려 제자리 회전 능력을 잃었습니다. 밀기에 대한 강건성은 동등했습니다.</span></div>
+  <div class="learn"><b>교훈</b><span>기각된 A/B도 기록할 가치가 있습니다. 다음 사람이 같은 걸 다시 시도하지 않습니다. 그리고 카메라 학습 경로를 만들 때는 <b>정보 누출 감사</b>를 먼저 하십시오. 깊이나 특권 정보가 학생 관측에 섞이면 결과가 전부 무의미해집니다.</span></div>
+</article>
+
+<article class="day">
+  <p class="date">2026-09-08</p>
+  <h3>카메라가 껍데기 안쪽을 보고 있었다</h3>
+  <div class="did"><b>한 일</b><span>렌더링된 카메라 프레임이 계속 어둡게 나오는 문제를 추적했습니다.</span></div>
+  <div class="got"><b>결과</b><span>근본 원인을 찾았습니다. 모델 파일의 머리 카메라가 <b>부드러운 턱 껍데기 안쪽에서 뒤쪽을 향하고</b> 있었습니다. CPU 레이캐스트로 증명한 뒤 전방을 보도록 자세를 잡았습니다. 프레임 평균 밝기가 255 중 70으로 회복됐습니다.</span></div>
+  <div class="learn"><b>교훈</b><span>센서가 이상하면 값을 의심하기 전에 <b>센서가 어디를 보고 있는지</b>부터 그려보십시오. 렌더 파이프라인을 며칠 의심하는 것보다 레이캐스트 한 번이 빠릅니다.</span></div>
+</article>
+
+<article class="day">
+  <p class="date">2026-09-09</p>
+  <h3>넘어진 자세에서 일어나기 — 명확한 실패</h3>
+  <div class="did"><b>한 일</b><span>기립 과제를 5,000회 학습하고, <b>평가 기준을 미리 등록한 뒤</b> 정해진 넘어진 자세들에서 시험했습니다.</span></div>
+  <div class="got"><b>결과</b><span>앉은 자세에서 일어서기 <span class="ok">98.4%</span>, 선 자세 유지 <span class="ok">100%</span>. 그러나 엎드린 자세에서 <span class="fail">0%</span>, 누운 자세에서도 <span class="fail">0%</span>입니다. 엎드린 자세에서는 약 35도까지 몸을 들었다가 거기서 멈췄습니다. <b>판정: 실패.</b></span></div>
+  <div class="learn"><b>교훈</b><span>평가 기준을 <b>학습 전에 글로 못박아 두십시오.</b> 결과를 보고 기준을 정하면 실패를 성공으로 읽게 됩니다. 이번에도 채점기에 버그가 있어 고쳤지만, 원자료는 건드리지 않고 다시 채점하는 도구를 따로 만들었습니다.</span></div>
+</article>
+
+<h2>점프 결과 요약</h2>
+<div class="scroll">
+<table>
+  <thead><tr><th>정책</th><th class="n">깨끗한 점프</th><th class="n">신호당 낙상</th><th class="n">평균 상승</th><th class="n">최대</th></tr></thead>
+  <tbody>
+    <tr><td>대조군 (평지 보행)</td><td class="n">약 6%</td><td class="n">0.3%</td><td class="n">0.5 cm</td><td class="n">1.2 cm</td></tr>
+    <tr><td>달리기 점프 2판</td><td class="n">11%</td><td class="n">0.9%</td><td class="n">0.63 cm</td><td class="n">3.6 cm</td></tr>
+    <tr><td><b>달리기 점프 3판</b></td><td class="n"><b>17%</b></td><td class="n">0.3%</td><td class="n">1.00 cm</td><td class="n"><b>4.1 cm</b></td></tr>
+    <tr><td>제자리 점프 1~4판</td><td class="n" colspan="4">대조군 수준. 유의미한 도약 없음</td></tr>
+  </tbody>
+</table>
+</div>
+<p style="font-size:14.5px;color:var(--mut)">신호 1,536회 기준. 달리기 점프 3판은 주행 조건에서 22%, 최대 4.7cm까지 올라갔습니다.</p>
+
+<h2>되풀이하지 말 것</h2>
+<p style="font-size:14.8px;color:var(--mut);margin-bottom:16px">아래는 전부 <b>한동안 사실이라고 믿었던 틀린 숫자</b>들입니다. 논문의 방법론은 무엇이 잘못됐는지 적은 만큼만 믿을 수 있습니다.</p>
+<ol class="traps">
+  <li><b>에피소드 한계보다 짧게 평가하면 낙상률이 무조건 100%로 나옵니다</b>
+    1,000스텝 한계를 2,000스텝으로 평가하면 시간 초과가 불가능해져 끝난 에피소드가 전부 낙상으로 집계됩니다. 최소 3배 길이로 평가하십시오.</li>
+  <li><b>서로 다른 길이로 잰 낙상률을 비교하지 마십시오</b>
+    2,000스텝으로 잰 값과 3,500스텝으로 잰 값을 나란히 놓았다가 잘못된 결론을 냈습니다.</li>
+  <li><b>윈도우에서 GPU 메모리 사용량은 믿을 수 없습니다</b>
+    환경 2,048개가 4,096개보다 더 많은 메모리를 쓰는 것으로 보고됐습니다. 메모리 여유를 기준으로 실험을 멈추는 규칙은 세우지 마십시오.</li>
+  <li><b>속성 이름이 틀렸는데 예외를 삼켜서 조용히 결측이 됐습니다</b>
+    속도 값이 모든 높이에서 결측으로 나왔습니다. 맨 <code>except</code>가 오류를 먹고 있었습니다. 예외는 치명적으로 처리하십시오.</li>
+  <li><b>월드 좌표 이동거리는 평균이 0이 됩니다</b>
+    명령이 몸통 기준이고 초기 방향이 무작위라, 모두가 제대로 걸어도 월드 기준 X 변위 평균은 0.041m였습니다. 출발점 기준 평면 거리로 바꾸십시오.</li>
+  <li><b>지표가 의도한 것을 재고 있는지 확인하십시오</b>
+    계단을 몇 칸 올랐는지 재려던 지표가 모든 높이에서 같은 값이었습니다. 실은 걸을 때의 상하 흔들림을 재고 있었습니다. 결과에서 철회했습니다.</li>
+  <li><b>점프 판정에 자세 검사를 넣으십시오</b>
+    몸통이 거의 수평인 상태도 점프로 집계되고 있었습니다.</li>
+  <li><b>실행 중인 스크립트 파일을 덮어쓰지 마십시오</b>
+    bash는 스크립트를 파일 오프셋으로 읽습니다. 3시간짜리 학습이 도는 중에 같은 이름으로 배포했더니, 학습이 끝난 뒤 bash가 <b>새 파일의 엉뚱한 위치</b>부터 읽어 후처리 전체가 날아갔습니다. 학습 자체는 무사했지만 평가와 영상과 기록이 실행되지 않았습니다. 새 이름으로 배포하거나 끝날 때까지 기다리십시오.</li>
+</ol>
+
+<h2>운영에서 배운 것</h2>
+<ol class="traps">
+  <li><b>긴 학습은 세션에서 분리해 띄우십시오</b>
+    대화형 세션의 백그라운드 작업이 두 번 통째로 종료됐습니다. 각각 13,205회차와 6,512회차에서였습니다. 250회마다 체크포인트를 남겨둔 덕에 둘 다 복구했습니다.</li>
+  <li><b>의존성 잠금을 함부로 갱신하지 마십시오</b>
+    구동기 모델이 가변 브랜치의 커밋에 묶여 있습니다. 잠금을 갱신하면 이미 학습한 모든 정책 아래에서 구동기 특성이 조용히 바뀝니다.</li>
+  <li><b>체크포인트는 해시로 참조하고 복사하지 마십시오</b>
+    결과물 디렉터리가 금방 수 기가바이트가 됩니다. 기록에는 해시만 남기고 실물은 원래 자리에 두십시오.</li>
+</ol>
+
+<h2>지금 상태</h2>
+<p>2026-09-05에 사용자 요청으로 학습을 일시 중지했고, 이후 평가와 시각 경로 정비, 기립 과제를 진행했습니다. 달리기 점프 4판은 17,250회차에서 멈춰 있습니다. 다음 단계는 <b>착지 과제를 먼저 학습한 뒤 낙상 벌점을 단계적으로 올리는 커리큘럼</b>입니다. 기준 궤적이 물리적으로 뜬다는 것은 확인했으므로, 남은 문제는 뛰는 법이 아니라 내려앉는 법입니다.</p>
+
+<footer>
+  <p>이 일지는 개인 연구 기록입니다. 상위 코드는 <a href="https://github.com/pollen-robotics/microduck_rl">pollen-robotics/microduck_rl</a>이며 그 저작권은 원저작자에게 있습니다. 여기에는 요약과 해석만 싣고 원자료·체크포인트·영상은 포함하지 않습니다.</p>
+</footer>
+
+</div>
+</body>
+</html>
