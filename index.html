@@ -86,6 +86,12 @@
   .shots img{width:100%;border:1px solid var(--line);border-radius:5px;display:block}
   .clips{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:14px 0 0}
   .clips video{width:100%;border:1px solid var(--line);border-radius:6px;background:#000;display:block}
+  .setup{display:grid;grid-template-columns:4.2rem 1fr;gap:12px;margin:12px 0 0;
+    font-size:13.4px;align-items:baseline;border-top:1px dashed var(--line);padding-top:10px}
+  .setup > b{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--mut)}
+  .setup code{font-size:12.3px;background:rgba(0,0,0,.045)}
+  .setup span{color:var(--mut)}
   .clips .cap{font-size:12.5px;color:var(--mut);margin-top:6px}
   @media (max-width:520px){
     .did,.got,.learn{grid-template-columns:1fr;gap:2px}
@@ -113,6 +119,27 @@
 </dl>
 <p style="font-size:14.5px;color:var(--mut);margin-top:14px">왜 WSL2인가. 취향이 아닙니다. 상위 저장소의 잠금파일이 CUDA 의존성을 리눅스에만 걸어두어, 네이티브 윈도우에 설치하면 CPU 전용 파이토치로 해석되고 GPU 선택 단계에서 죽습니다. 저장소는 WSL 파일시스템 안에 두어야 합니다. <code>/mnt/c</code>에 두면 파일 입출력이 크게 느려집니다.</p>
 
+
+<h2>학습 방법</h2>
+<p style="font-size:14.8px;margin-bottom:6px">전 과제가 같은 뼈대를 씁니다. <b>PPO</b> 하나로만 돌렸고, 구현은 <code>rsl-rl 5.0.1</code>, 환경은 <code>mjlab</code>의 매니저 기반 구성입니다. 오프폴리시나 모방학습은 쓰지 않았습니다.</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>항목</th><th>값</th><th>항목</th><th>값</th></tr></thead>
+  <tbody>
+    <tr><td>알고리즘</td><td>PPO (비대칭 액터-크리틱)</td><td>할인율</td><td class="mono">0.99</td></tr>
+    <tr><td>액터 관측</td><td>61차원</td><td>GAE λ</td><td class="mono">0.95</td></tr>
+    <tr><td>크리틱 관측</td><td>76차원 (특권 상태 포함)</td><td>클립</td><td class="mono">0.2</td></tr>
+    <tr><td>액터망</td><td class="mono">61→512→256→128→14, ELU</td><td>엔트로피 계수</td><td class="mono">0.01</td></tr>
+    <tr><td>크리틱망</td><td class="mono">76→512→256→128→1, ELU</td><td>학습률</td><td class="mono">1e-3, 적응형</td></tr>
+    <tr><td>행동 분포</td><td>가우시안, 스칼라 표준편차 (초기 1.0)</td><td>목표 KL</td><td class="mono">0.01</td></tr>
+    <tr><td>환경당 스텝</td><td class="mono">24</td><td>에폭 / 미니배치</td><td class="mono">5 / 4</td></tr>
+  </tbody>
+</table>
+</div>
+<p style="font-size:14.5px;color:var(--mut)">관측은 고유수용 감각(각속도·중력투영·관절 위치·관절 속도·직전 행동)과 명령(속도 3, 머리 자세 4, 몸통 자세 6)으로 구성됩니다. <b>높이 스캔이 없습니다.</b> 험지에서 정책은 지면을 못 보고 몸으로 느낀 외란만으로 추론합니다.</p>
+<p style="font-size:14.5px;color:var(--mut)">도메인 무작위화는 세 시점에 겁니다. 시작 시점에 마찰·엔코더 편향·질량중심·관성, 초기화 시점에 질량중심·관절 마찰·아마추어·자세, 주기적으로 외부 밀기입니다. 커리큘럼 항은 일곱 개이고 <b>전부 2,000회차에서 끝납니다.</b> 그 뒤로는 과제가 고정됩니다.</p>
+<p style="font-size:14.5px;color:var(--mut)">보상은 보행 과제 기준 15개 항입니다. <b>낙상 벌점도 종료 벌점도 없습니다.</b> 점프 과제에만 낙상 벌점 −500을 따로 넣었습니다. 이 차이가 뒤에 나오는 두 실패를 갈랐습니다.</p>
+
 <h2>날짜별 기록</h2>
 
 <article class="day">
@@ -121,6 +148,7 @@
   <div class="did"><b>한 일</b><span>설치, GPU 경로 확인, 5회 반복짜리 짧은 실행 다섯 개, 한 시간 연속 열 테스트.</span></div>
   <div class="got"><b>결과</b><span>1시간에 1,250회 반복. 온도와 처리량이 안정적. 학습을 걸어도 되는 상태 확인.</span></div>
   <div class="learn"><b>교훈</b><span>본 실험 전에 한 시간짜리 연속 실행을 반드시 해보십시오. 노트북 GPU는 발열로 처리량이 떨어지는데, 5분 실행으로는 보이지 않습니다.</span></div>
+  <div class="setup"><b>설정</b><span>PPO · <code>rsl-rl 5.0.1</code><br>속도추종 평지 과제로 스모크 5회 + 1시간 연속. 환경 수와 처리량 한계 측정.</span></div>
 </article>
 
 <article class="day">
@@ -128,7 +156,8 @@
   <h3>평지 보행 기준선, 그리고 후반 퇴행</h3>
   <div class="did"><b>한 일</b><span>속도추종 평지 과제를 두 시드로 학습(각 6,000회 내외), 한 시드는 9,500회까지 연장. 험지 과제는 웜스타트로 18,249회 완주.</span></div>
   <div class="got"><b>결과</b><span>험지는 완주했고 최종 평균 보상 100.21. 그런데 평지에서 <span class="fail">후반에 성능이 나빠지는 현상</span>을 발견했습니다. 6,000회차 체크포인트의 낙상률이 34~38%로, 그 전 체크포인트보다 나빴습니다.</span></div>
-  <div class="learn"><b>교훈</b><span>마지막 체크포인트가 최선이라고 가정하지 마십시오. 체크포인트마다 실제로 평가해야 압니다. 원인으로 추정한 메커니즘은 기록만 해두고 검증되지 않았다고 명시했습니다.</span></div>
+  <div class="learn"><b>교훈</b><span>마지막 체크포인트가 최선이라고 가정하지 마십시오. 이 과제에는 <b>낙상 벌점이 아예 없습니다.</b> 넘어져도 정책이 손해를 안 보니 더 공격적인 쪽으로 계속 밀려갈 수 있습니다. 게다가 질량중심 무작위화를 ±30mm까지 올린 구간이 발 지지면을 벗어났고, 퇴행이 나타난 시점이 그 증가 시점과 맞았습니다. 상한을 ±15mm로 되돌렸습니다. 원인 추정은 검증되지 않았다고 명시해 두었습니다.</span></div>
+  <div class="setup"><b>설정</b><span>PPO · <code>Mjlab-Velocity-Flat</code> / <code>-Rough</code><br>시드 42·43 병행. 험지는 평지 정책에서 웜스타트. 체크포인트 250회마다.</span></div>
 </article>
 
 <article class="day">
@@ -137,6 +166,7 @@
   <div class="did"><b>한 일</b><span>계단 높이를 바꿔가며 넘을 수 있는 한계를 쟀습니다. 점프가 물리적으로 가능한지 계산했습니다. 앉았다 일어서기 과제를 새로 열었습니다.</span></div>
   <div class="got"><b>결과</b><span>계단은 실용 한계가 <b>약 1cm</b>였습니다(낙상률 40% 미만 기준). 원인은 학습 커리큘럼의 계단 범위였습니다. 앉았다 일어서기는 13,000회차에서 한 사이클 성공률 66.4%.</span></div>
   <div class="learn"><b>교훈</b><span>점프 상한을 <b>0.91cm로 계산했다가 같은 날 밤에 틀렸음을 발견</b>했습니다. 기준점을 발목에 두고 계산했는데 실제로는 발끝이 지면을 미는 지점이었습니다. 다시 계산하니 낙관적 상한이 4~6cm였습니다. 틀린 값을 지우지 않고 정정 항목을 새로 추가했습니다.</span></div>
+  <div class="setup"><b>설정</b><span>PPO · <code>Mjlab-Stairs-Rough-MicroDuck</code> · <code>Mjlab-SitStand-Flat-MicroDuck</code><br>계단은 학습이 아니라 기존 정책의 <b>평가 스윕</b>. 앉았다 일어서기는 2,048환경 신규 학습. 자세 평가는 <code>evaluate_squat.py</code>(128환경 스크립트 프로토콜).</span></div>
 </article>
 
 <article class="day">
@@ -145,6 +175,7 @@
   <div class="did"><b>한 일</b><span>제자리 점프를 8,000회까지 학습. 실패 후 보상 설계를 바꾼 2판. 동시에 달리면서 뛰는 과제를 병행.</span></div>
   <div class="got"><b>결과</b><span>제자리 점프는 <span class="fail">8,000회까지 이륙 자체가 없었습니다.</span> 반면 달리기 점프에서는 <span class="ok">처음으로 측정 가능한 도약</span>이 나왔습니다. 깨끗한 점프 11%, 평균 상승 0.63cm.</span></div>
   <div class="learn"><b>교훈</b><span>정책의 엔트로피를 보십시오. 14차원 행동공간에서 엔트로피가 −10.2까지 떨어져 있었습니다. 탐색이 죽은 상태라 아무리 오래 돌려도 새 동작이 나오지 않습니다. 오래 돌리는 게 답이 아닐 때가 있습니다.</span></div>
+  <div class="setup"><b>설정</b><span>PPO · <code>Mjlab-Jump-Stand-MicroDuck</code> v1·v2 · <code>Mjlab-Jump-Run-MicroDuck</code> v2<br>평지 보행 정책에서 웜스타트. 실행은 <code>jump_stand_run.sh</code>(환경변수 <code>TASK</code>/<code>TAG</code>/<code>LOAD_RUN</code>/<code>LOAD_CK</code>/<code>ITERS</code>). 점프 신호는 <code>JumpTriggerCommand</code>.</span></div>
 </article>
 
 <article class="day">
@@ -159,6 +190,7 @@
       <figcaption>제자리 점프 4판. 뛰었다가 후퇴한 그 정책.</figcaption></figure>
   </div>
   <div class="learn"><b>교훈</b><span>이 프로젝트에서 가장 중요한 발견입니다. 낙상 벌점이 −500인 상태에서, 정책은 뛰면 넘어지니까 <b>뛰기를 포기하는 쪽이 이득</b>이라고 학습했습니다. 뛰는 법을 못 배운 게 아니라 배웠다가 버린 겁니다. 처방은 순서를 바꾸는 것입니다. <b>착지를 먼저 가르치고 그다음에 점프를 가르친다.</b></span></div>
+  <div class="setup"><b>설정</b><span>PPO · <code>Jump-Stand-v3·v4</code> · <code>Jump-Run-v3·v4</code> · <code>Mjlab-Land-Flat-MicroDuck</code>(준비)<br>v4는 웅크렸다 차는 <b>기준 궤적을 관측에 추가</b>한 구성. 개루프 재생은 학습 없이 궤적만 물리에 넣어 확인. 평가는 신호 1,536회 기준 자체 평가기.</span></div>
 </article>
 
 <article class="day">
@@ -167,6 +199,7 @@
   <div class="did"><b>한 일</b><span>속도추종 보상 커널의 폭을 좁힌 미세조정을 대조군과 A/B로 비교했습니다. 별도로 단안 카메라만 쓰는 학생 정책 인터페이스를 만들었습니다.</span></div>
   <div class="got"><b>결과</b><span><span class="fail">가설 기각.</span> 추종 성능이 좋아지지 않았고, 오히려 제자리 회전 능력을 잃었습니다. 밀기에 대한 강건성은 동등했습니다.</span></div>
   <div class="learn"><b>교훈</b><span>기각된 A/B도 기록할 가치가 있습니다. 다음 사람이 같은 걸 다시 시도하지 않습니다. 그리고 카메라 학습 경로를 만들 때는 <b>정보 누출 감사</b>를 먼저 하십시오. 깊이나 특권 정보가 학생 관측에 섞이면 결과가 전부 무의미해집니다.</span></div>
+  <div class="setup"><b>설정</b><span>PPO · 속도추종 미세조정 A/B<br>추종 커널 분산만 0.1 → 0.025로 바꾼 대조 실험. 두 팔 모두 같은 종료 상태 커리큘럼에서 출발. 별도로 <code>lab_vision/</code>에 단안 RGB 학생 관측군 추가(누출 감사 포함).</span></div>
 </article>
 
 <article class="day">
@@ -182,6 +215,7 @@
   </div>
   <p style="font-size:12.5px;color:var(--mut);margin:7px 0 10px">학생 정책이 실제로 받던 64×48 RGB 관측입니다. 왼쪽은 껍데기 안쪽을 보고 있던 상태입니다.</p>
   <div class="learn"><b>교훈</b><span>센서가 이상하면 값을 의심하기 전에 <b>센서가 어디를 보고 있는지</b>부터 그려보십시오. 렌더 파이프라인을 며칠 의심하는 것보다 레이캐스트 한 번이 빠릅니다.</span></div>
+  <div class="setup"><b>설정</b><span>진단 작업 (학습 없음) → <code>StandUp-Flat</code> 착수<br>어두운 프레임은 CPU 레이캐스트로 원인 규명. 기립 과제는 2,048환경 PPO, 평가 기준을 <b>학습 전에</b> 문서로 등록.</span></div>
 </article>
 
 <article class="day">
@@ -190,6 +224,7 @@
   <div class="did"><b>한 일</b><span>기립 과제를 5,000회 학습하고, <b>평가 기준을 미리 등록한 뒤</b> 정해진 넘어진 자세들에서 시험했습니다.</span></div>
   <div class="got"><b>결과</b><span>앉은 자세에서 일어서기 <span class="ok">98.4%</span>, 선 자세 유지 <span class="ok">100%</span>. 그러나 엎드린 자세에서 <span class="fail">0%</span>, 누운 자세에서도 <span class="fail">0%</span>입니다. 엎드린 자세에서는 약 35도까지 몸을 들었다가 거기서 멈췄습니다. <b>판정: 실패.</b></span></div>
   <div class="learn"><b>교훈</b><span>평가 기준을 <b>학습 전에 글로 못박아 두십시오.</b> 결과를 보고 기준을 정하면 실패를 성공으로 읽게 됩니다. 이번에도 채점기에 버그가 있어 고쳤지만, 원자료는 건드리지 않고 다시 채점하는 도구를 따로 만들었습니다.</span></div>
+  <div class="setup"><b>설정</b><span>PPO · <code>StandUp-Flat</code> 5,000회차 결과<br>평가는 <code>recov_eval.sh</code> 체인. 넘어진 자세를 고정 조건으로 지정하고 일어서서 <b>버티는 것까지</b> 성공으로 셈. 채점기 수정 후 원자료는 그대로 두고 재채점 도구를 따로 만듦.</span></div>
 </article>
 
 <h2>점프 결과 요약</h2>
