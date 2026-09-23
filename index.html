@@ -72,6 +72,21 @@
   a{color:var(--accent-ink)}
   footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);
     color:var(--mut);font-size:13px}
+
+  figure{margin:12px 0 0;padding:0}
+  figcaption{font-size:12.5px;color:var(--mut);margin-top:7px;line-height:1.55}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0 0}
+  .pair > div{text-align:center}
+  .pair img{width:100%;max-width:220px;image-rendering:pixelated;
+    border:1px solid var(--line);border-radius:4px;background:#000}
+  .pair .tag{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);
+    display:block;margin-top:6px}
+  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0 0}
+  .shots img{width:100%;border:1px solid var(--line);border-radius:5px;display:block}
+  .clips{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:14px 0 0}
+  .clips video{width:100%;border:1px solid var(--line);border-radius:6px;background:#000;display:block}
+  .clips .cap{font-size:12.5px;color:var(--mut);margin-top:6px}
   @media (max-width:520px){
     .did,.got,.learn{grid-template-columns:1fr;gap:2px}
     .learn{margin-left:0;margin-right:0}
@@ -137,6 +152,12 @@
   <h3>기준 궤적은 뜨지만 넘어진다 — 핵심 진단</h3>
   <div class="did"><b>한 일</b><span>웅크렸다 발끝으로 차는 기준 궤적을 직접 만들어 개루프로 재생했습니다. 그 궤적을 참고 신호로 준 4판을 학습했습니다.</span></div>
   <div class="got"><b>결과</b><span>기준 궤적은 <span class="ok">실제로 떴습니다.</span> 체공 86밀리초, 높이 4.75cm. 그런데 <span class="fail">100% 넘어졌습니다.</span> 달리기 3판은 깨끗한 점프 17%(주행 조건 22%), 최대 4.1cm로 최고 기록. 제자리 4판은 17,798회차에서 뛰기 시작했다가 18,551회차에서 <span class="fail">다시 안 뛰기로 후퇴</span>했습니다.</span></div>
+  <div class="shots">
+    <figure><img src="media/runjump_v3.png" alt="달리기 점프 3판이 공중에 뜬 순간">
+      <figcaption>달리기 점프 3판, 최고 기록이 나온 순간.</figcaption></figure>
+    <figure><img src="media/standjump_v4.png" alt="제자리 점프 4판의 자세">
+      <figcaption>제자리 점프 4판. 뛰었다가 후퇴한 그 정책.</figcaption></figure>
+  </div>
   <div class="learn"><b>교훈</b><span>이 프로젝트에서 가장 중요한 발견입니다. 낙상 벌점이 −500인 상태에서, 정책은 뛰면 넘어지니까 <b>뛰기를 포기하는 쪽이 이득</b>이라고 학습했습니다. 뛰는 법을 못 배운 게 아니라 배웠다가 버린 겁니다. 처방은 순서를 바꾸는 것입니다. <b>착지를 먼저 가르치고 그다음에 점프를 가르친다.</b></span></div>
 </article>
 
@@ -153,6 +174,13 @@
   <h3>카메라가 껍데기 안쪽을 보고 있었다</h3>
   <div class="did"><b>한 일</b><span>렌더링된 카메라 프레임이 계속 어둡게 나오는 문제를 추적했습니다.</span></div>
   <div class="got"><b>결과</b><span>근본 원인을 찾았습니다. 모델 파일의 머리 카메라가 <b>부드러운 턱 껍데기 안쪽에서 뒤쪽을 향하고</b> 있었습니다. CPU 레이캐스트로 증명한 뒤 전방을 보도록 자세를 잡았습니다. 프레임 평균 밝기가 255 중 70으로 회복됐습니다.</span></div>
+  <div class="pair">
+    <div><img src="media/cam_before.png" alt="수정 전 거의 검은 카메라 프레임">
+      <span class="tag">수정 전 · 09-06</span></div>
+    <div><img src="media/cam_after.png" alt="수정 후 장면이 보이는 카메라 프레임">
+      <span class="tag">수정 후 · 09-08</span></div>
+  </div>
+  <p style="font-size:12.5px;color:var(--mut);margin:7px 0 10px">학생 정책이 실제로 받던 64×48 RGB 관측입니다. 왼쪽은 껍데기 안쪽을 보고 있던 상태입니다.</p>
   <div class="learn"><b>교훈</b><span>센서가 이상하면 값을 의심하기 전에 <b>센서가 어디를 보고 있는지</b>부터 그려보십시오. 렌더 파이프라인을 며칠 의심하는 것보다 레이캐스트 한 번이 빠릅니다.</span></div>
 </article>
 
@@ -177,6 +205,16 @@
 </table>
 </div>
 <p style="font-size:14.5px;color:var(--mut)">신호 1,536회 기준. 달리기 점프 3판은 주행 조건에서 22%, 최대 4.7cm까지 올라갔습니다.</p>
+
+<h2>움직이는 것 보기</h2>
+<div class="clips">
+  <figure><video src="media/walk_flat.mp4" controls muted loop playsinline preload="metadata"></video>
+    <p class="cap">평지 보행, 6,000회차. 기준선이 되는 정책입니다.</p></figure>
+  <figure><video src="media/squat.mp4" controls muted loop playsinline preload="metadata"></video>
+    <p class="cap">앉았다 일어서기, 8,000회차. 내려갈 때 넘어지는 경향이 보입니다.</p></figure>
+  <figure><video src="media/jump_run_v3.mp4" controls muted loop playsinline preload="metadata"></video>
+    <p class="cap">달리기 점프 3판, 16,000회차. 가장 높이 뛴 정책입니다.</p></figure>
+</div>
 
 <h2>되풀이하지 말 것</h2>
 <p style="font-size:14.8px;color:var(--mut);margin-bottom:16px">아래는 전부 <b>한동안 사실이라고 믿었던 틀린 숫자</b>들입니다. 논문의 방법론은 무엇이 잘못됐는지 적은 만큼만 믿을 수 있습니다.</p>
