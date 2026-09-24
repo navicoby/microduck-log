@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MicroDuck 훈련일지</title>
-<meta name="description" content="이족보행 로봇 MicroDuck의 강화학습 훈련 기록 — 무엇을 시도했고 무엇이 나왔는지, 실패와 정정까지 날짜별로.">
+<title>MicroDuck 강화학습 훈련일지 | 피지컬 AI 실험 기록</title>
+<meta name="description" content="MicroDuck 이족보행 로봇의 강화학습 실험 기록. 시뮬레이션 환경, 보행·점프·기립의 평가 결과, 측정 오류와 후속 가설을 정리합니다.">
 <style>
   :root{
     --bg:#eef1ee; --panel:#f6f8f6; --ink:#17201c; --mut:#57635c; --line:#d6ded8;
@@ -14,7 +14,7 @@
   }
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
-  body{margin:0;background:var(--bg);color:var(--ink);
+  body{word-break:keep-all;overflow-wrap:anywhere;margin:0;background:var(--bg);color:var(--ink);
     font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     -webkit-font-smoothing:antialiased}
   .mono,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
@@ -102,7 +102,16 @@
   .setup code{font-size:12.3px;background:rgba(0,0,0,.045)}
   .setup span{color:var(--mut)}
   .clips .cap{font-size:12.5px;color:var(--mut);margin-top:6px}
+  .note{font-size:14.5px;color:var(--mut)}
+  .media-note{font-size:12.5px;color:var(--mut);margin:7px 0 10px}
+  .context-list,.next-steps{font-size:14.6px;padding-left:20px;line-height:1.75}
+  .context-list li,.next-steps li{margin-bottom:8px}
+  .spec dd,.terms dd,.setup span{min-width:0;overflow-wrap:anywhere}
+  .day,.note{overflow-wrap:anywhere}
   @media (max-width:520px){
+    .terms{grid-template-columns:1fr;gap:4px}
+    .terms dd{margin-bottom:8px}
+    .setup{grid-template-columns:1fr;gap:2px}
     .did,.got,.learn{grid-template-columns:1fr;gap:2px}
     .learn{margin-left:0;margin-right:0}
   }
@@ -112,202 +121,224 @@
 <div class="wrap">
 
 <header>
-  <p class="eyebrow">Training Log</p>
+  <p class="eyebrow">Physical AI · Training Log</p>
   <h1>MicroDuck 강화학습 훈련일지</h1>
-  <p class="lede">작은 이족보행 로봇을 시뮬레이터 안에서 걷고, 앉았다 일어서고, 뛰어오르게 만드는 작업 기록입니다. 노트북 GPU 한 대로 돌립니다.</p>
-  <p class="lede">성공보다 실패가 많고 그대로 적었습니다. 같은 걸 시도하는 분이 같은 벽에 다시 부딪히지 않도록 <b>무엇을 했고 무엇이 나왔는지</b>, <b>어떤 측정이 틀렸는지</b>, <b>어떤 가설이 데이터로 반증됐는지</b>를 남깁니다. 원자료와 체크포인트는 싣지 않습니다.</p>
+  <p class="lede">소형 이족보행 로봇 MicroDuck의 움직임을 강화학습으로 구현하는 실험 기록입니다. 노트북 GPU 한 대에서 보행, 앉았다 일어서기, 점프, 낙상 후 기립을 시뮬레이션으로 학습하고 평가합니다.</p>
+  <p class="lede">비슷한 실험을 설계하는 사람이 참고할 수 있도록 <b>실험 조건, 관측 결과, 결과에 대한 해석</b>을 구분해 정리했습니다. 성능 변화뿐 아니라 평가 오류와 가설을 수정한 과정도 함께 기록합니다.</p>
+  <p class="lede">기록 범위는 2026년 9월 1~24일의 시뮬레이션 실험입니다. 아래 수치와 영상은 실제 로봇에서 검증한 결과를 뜻하지 않습니다.</p>
 </header>
 
-<h2>환경</h2>
+<h2>실험 환경</h2>
 <dl class="spec">
-  <dt>로봇</dt><dd>MicroDuck — 소형 이족보행 플랫폼, 14자유도</dd>
-  <dt>시뮬레이터</dt><dd>MuJoCo 3.10 + mujoco-warp 3.8 (GPU 배치 물리)</dd>
-  <dt>프레임워크</dt><dd>mjlab 1.3 · rsl-rl 5.0 (PPO)</dd>
-  <dt>하드웨어</dt><dd>RTX 4080 Laptop 12GB · i9-13900HX · WSL2 Ubuntu 24.04</dd>
-  <dt>상위 코드</dt><dd><a href="https://github.com/pollen-robotics/microduck_rl">pollen-robotics/microduck_rl</a> (커밋 고정)</dd>
+  <dt>로봇</dt><dd>MicroDuck · 소형 이족보행 플랫폼, 14자유도</dd>
+  <dt>시뮬레이터</dt><dd>MuJoCo 3.10 + mujoco-warp 3.8 · GPU 병렬 물리 시뮬레이션</dd>
+  <dt>학습 도구</dt><dd>mjlab 1.3 · rsl-rl 5.0.1 · PPO</dd>
+  <dt>장비·운영체제</dt><dd>RTX 4080 Laptop 12GB · i9-13900HX · WSL2 Ubuntu 24.04</dd>
+  <dt>기반 코드</dt><dd><a href="https://github.com/pollen-robotics/microduck_rl">pollen-robotics/microduck_rl</a> · 실험에서는 커밋을 고정해 사용</dd>
 </dl>
-<p style="font-size:14.5px;color:var(--mut);margin-top:14px">왜 WSL2인가. 취향이 아닙니다. 상위 저장소의 잠금파일이 CUDA 의존성을 리눅스에만 걸어두어, 네이티브 윈도우에 설치하면 CPU 전용 파이토치로 해석되고 GPU 선택 단계에서 죽습니다. 저장소는 WSL 파일시스템 안에 두어야 합니다. <code>/mnt/c</code>에 두면 파일 입출력이 크게 느려집니다.</p>
+<p class="note">실험 당시 의존성 잠금 파일은 Linux 환경에 CUDA 패키지를 지정하고 있었습니다. Windows에 직접 설치했을 때는 CPU용 PyTorch가 선택되어 GPU 초기화에 실패했고, 이후 WSL2에서 환경을 구성했습니다. 파일 입출력 성능은 작업 파일의 위치에도 영향을 받으므로, WSL의 Linux 파일시스템과 <code>/mnt/c</code> 중 어느 경로를 사용하는지 실행 조건에 함께 기록하는 것이 좋습니다.</p>
 
-
-
-<h2>용어</h2>
-<p style="font-size:14.8px;margin-bottom:2px">이 글에 반복해서 나오는 말들입니다. 이 분야를 처음 보시면 여기부터 읽으십시오.</p>
+<h2>주요 용어</h2>
+<p>아래 용어는 학습 설정과 날짜별 기록에서 같은 의미로 사용합니다.</p>
 <dl class="terms">
-  <dt>PPO</dt><dd>Proximal Policy Optimization, 근접 정책 최적화. 이 프로젝트가 쓴 학습 알고리즘입니다. 로봇을 잔뜩 굴려 보고 잘된 행동의 확률은 올리고 못한 행동은 내리되, <b>한 번에 크게 바꾸지 못하도록 변화 폭을 잘라</b> 안정성을 얻습니다. 그 자르는 폭이 설정표의 <code>클립 0.2</code>입니다. 2017년에 나왔고 로봇 보행 학습의 사실상 기본값입니다.</dd>
-  <dt>정책</dt><dd>관측을 받아 관절 명령을 내놓는 신경망. 학습의 결과물이자 로봇에 올리는 것입니다.</dd>
-  <dt>액터 · 크리틱</dt><dd>액터는 정책 본체로 실기에 올라갑니다. 크리틱은 "지금 상태가 얼마나 좋은가"를 점수 매기는 보조 신경망이고 <b>학습에만 쓰고 버립니다.</b> 그래서 크리틱에는 시뮬레이터만 아는 정보를 줘도 됩니다.</dd>
-  <dt>회차</dt><dd>환경을 한 번 굴려보고 정책을 한 번 갱신하는 주기. 이 글의 "16,000회차"는 그걸 만 육천 번 반복했다는 뜻입니다.</dd>
-  <dt>환경</dt><dd>시뮬레이터 안의 로봇 한 개체. 4,096환경이면 로봇 4,096마리를 동시에 굴린다는 뜻입니다. 병렬로 굴려 표본을 빨리 모으는 것이 GPU 학습의 핵심입니다.</dd>
-  <dt>웜스타트</dt><dd>빈 상태가 아니라 이미 학습된 정책에서 이어서 학습하는 것. 걷기를 아는 정책에서 점프를 가르치는 식입니다.</dd>
-  <dt>체크포인트</dt><dd>학습 도중 저장한 정책 스냅샷. 250회차마다 남겨서, 학습이 끊기거나 나중에 성능이 나빠져도 되돌아갈 수 있습니다.</dd>
-  <dt>커리큘럼</dt><dd>과제를 처음엔 쉽게 주고 점점 어렵게 만드는 장치. 이번에 <b>낙상 벌점을 처음부터 걸지 않고 나중에 올린 것</b>이 제자리 점프를 풀었습니다.</dd>
-  <dt>엔트로피</dt><dd>정책이 얼마나 다양하게 시도하는지를 재는 값. 낮을수록 늘 같은 행동만 합니다. 이 값이 무너지면 아무리 오래 돌려도 새 동작이 나오지 않습니다.</dd>
-  <dt>도메인 무작위화</dt><dd>마찰·질량·센서 오차 따위를 매번 조금씩 흔드는 것. 시뮬레이터에만 맞춰진 정책이 실기에서 무너지는 것을 막습니다.</dd>
-  <dt>ONNX</dt><dd>학습한 신경망을 프레임워크와 무관한 형식으로 내보낸 파일. 실제 로봇에 올릴 때 씁니다.</dd>
+  <dt>PPO</dt><dd>Proximal Policy Optimization. 환경과의 상호작용으로 수집한 데이터로 정책을 갱신하는 강화학습 알고리즘입니다. 이 실험의 클리핑 설정은 새 정책과 이전 정책의 행동 확률비가 목적함수에 미치는 영향을 제한해 급격한 갱신을 억제합니다. 설정값은 0.2입니다. <a href="https://arxiv.org/abs/1707.06347">알고리즘 원문</a></dd>
+  <dt>정책</dt><dd>관측값을 입력받아 로봇의 행동 명령을 출력하는 신경망입니다. 이 실험에서는 관절 제어에 사용할 14차원 행동을 생성합니다.</dd>
+  <dt>액터 · 크리틱</dt><dd>액터는 행동을 선택하는 정책이고, 크리틱은 앞으로 얻을 보상의 기대값을 추정해 학습을 돕습니다. 비대칭 구성에서는 크리틱에만 시뮬레이터 내부 정보를 추가로 제공하며, 실행용 정책에는 액터를 사용합니다.</dd>
+  <dt>학습 회차</dt><dd>병렬 환경에서 데이터를 수집한 뒤 정책을 갱신하는 한 주기입니다. 한 회차에는 여러 시뮬레이션 스텝과 여러 번의 최적화가 포함됩니다. 에피소드 수나 물리 시뮬레이션 스텝 수와는 다릅니다.</dd>
+  <dt>병렬 환경</dt><dd>독립적으로 실행되는 시뮬레이션 인스턴스입니다. 4,096개 환경은 로봇 4,096개체의 경험을 병렬로 수집한다는 뜻입니다.</dd>
+  <dt>웜스타트</dt><dd>이미 학습된 정책을 초기값으로 사용해 새 과제를 학습하는 방법입니다. 이 기록에서는 보행 정책이나 착지 정책에서 점프 학습을 시작했습니다.</dd>
+  <dt>체크포인트</dt><dd>학습 중간에 저장한 모델 상태입니다. 중단된 학습을 재개하거나 회차별 성능을 비교할 때 사용합니다. 이 실험의 저장 간격은 250회차입니다.</dd>
+  <dt>커리큘럼</dt><dd>학습 진행에 따라 과제 난도나 보상·벌점의 적용 범위를 조절하는 방법입니다. 점프 실험에서는 낙상 벌점을 단계적으로 도입하는 구성을 사용했습니다.</dd>
+  <dt>엔트로피</dt><dd>행동 분포의 퍼짐 정도를 나타내는 지표입니다. 동일한 행동 정의와 척도에서 값이 감소하면 탐색 범위가 좁아졌을 가능성을 살펴봅니다. 연속 분포의 엔트로피는 음수가 될 수 있으므로 부호만으로 학습 실패를 판정하지 않습니다.</dd>
+  <dt>도메인 무작위화</dt><dd>마찰, 질량, 센서 오차 등의 조건을 바꾸며 학습하는 방법입니다. 특정 시뮬레이션 조건에 대한 과적합을 줄이려는 목적이며, 실제 로봇에서의 성능은 별도로 평가해야 합니다.</dd>
+  <dt>ONNX</dt><dd>학습한 신경망을 다른 실행 환경에서 사용할 수 있도록 저장하는 모델 형식입니다. 이 구성에서는 관측 정규화 연산을 포함해 정책을 내보냅니다.</dd>
 </dl>
 
-<h2>학습 방법</h2>
-<p style="font-size:14.8px;margin-bottom:6px">전 과제가 같은 뼈대를 씁니다. <b>PPO</b>(근접 정책 최적화, 위 용어 참고) 하나로만 돌렸고, 구현은 <code>rsl-rl 5.0.1</code>, 환경은 <code>mjlab</code>의 매니저 기반 구성입니다. 오프폴리시나 모방학습은 쓰지 않았습니다.</p>
+<h2>학습 구성</h2>
+<p>학습 알고리즘은 PPO이며, <code>rsl-rl 5.0.1</code>과 <code>mjlab</code>의 매니저 기반 환경을 사용했습니다. 아래 표는 기본 보행 구성입니다. 점프 과제의 기준 궤적 입력처럼 과제별로 추가한 항목은 해당 날짜의 설정에 따로 적었습니다.</p>
 <div class="scroll">
 <table>
   <thead><tr><th>항목</th><th>값</th><th>항목</th><th>값</th></tr></thead>
   <tbody>
     <tr><td>알고리즘</td><td>PPO (비대칭 액터-크리틱)</td><td>할인율</td><td class="mono">0.99</td></tr>
     <tr><td>액터 관측</td><td>61차원</td><td>GAE λ</td><td class="mono">0.95</td></tr>
-    <tr><td>크리틱 관측</td><td>76차원 (특권 상태 포함)</td><td>클립</td><td class="mono">0.2</td></tr>
-    <tr><td>액터망</td><td class="mono">61→512→256→128→14, ELU</td><td>엔트로피 계수</td><td class="mono">0.01</td></tr>
-    <tr><td>크리틱망</td><td class="mono">76→512→256→128→1, ELU</td><td>학습률</td><td class="mono">1e-3, 적응형</td></tr>
+    <tr><td>크리틱 관측</td><td>76차원 (특권 정보 포함)</td><td>PPO 클리핑</td><td class="mono">0.2</td></tr>
+    <tr><td>액터 신경망</td><td class="mono">61→512→256→128→14, ELU</td><td>엔트로피 계수</td><td class="mono">0.01</td></tr>
+    <tr><td>크리틱 신경망</td><td class="mono">76→512→256→128→1, ELU</td><td>학습률</td><td class="mono">1e-3, 적응형</td></tr>
     <tr><td>행동 분포</td><td>가우시안, 스칼라 표준편차 (초기 1.0)</td><td>목표 KL</td><td class="mono">0.01</td></tr>
-    <tr><td>환경당 스텝</td><td class="mono">24</td><td>에폭 / 미니배치</td><td class="mono">5 / 4</td></tr>
+    <tr><td>회차당 환경 스텝</td><td class="mono">24</td><td>에폭 / 미니배치</td><td class="mono">5 / 4</td></tr>
   </tbody>
 </table>
 </div>
-<p style="font-size:14.5px;color:var(--mut)">관측은 고유수용 감각(각속도·중력투영·관절 위치·관절 속도·직전 행동)과 명령(속도 3, 머리 자세 4, 몸통 자세 6)으로 구성됩니다. <b>높이 스캔이 없습니다.</b> 험지에서 정책은 지면을 못 보고 몸으로 느낀 외란만으로 추론합니다.</p>
-<p style="font-size:14.5px;color:var(--mut)">도메인 무작위화는 세 시점에 겁니다. 시작 시점에 마찰·엔코더 편향·질량중심·관성, 초기화 시점에 질량중심·관절 마찰·아마추어·자세, 주기적으로 외부 밀기입니다. 커리큘럼 항은 일곱 개이고 <b>전부 2,000회차에서 끝납니다.</b> 그 뒤로는 과제가 고정됩니다.</p>
-<p style="font-size:14.5px;color:var(--mut)">보상은 보행 과제 기준 15개 항입니다. <b>낙상 벌점도 종료 벌점도 없습니다.</b> 점프 과제에만 낙상 벌점 −500을 따로 넣었습니다. 이 차이가 뒤에 나오는 두 실패를 갈랐습니다.</p>
+<p class="note">액터의 입력은 고유수용 관측 48차원과 명령 13차원으로 구성됩니다. 고유수용 관측에는 각속도, 중력 투영 벡터, 관절 위치·속도, 직전 행동이 포함됩니다. 명령은 속도 3차원, 머리 자세 4차원, 몸통 자세 6차원입니다. 지면 높이 스캔은 입력하지 않으므로, 이 보행 정책은 지형 형상을 직접 관측하지 않습니다.</p>
+<p class="note">도메인 무작위화는 세 시점에 적용했습니다. 실행 시작 시에는 마찰·엔코더 편향·질량중심·관성을, 환경 초기화 시에는 질량중심·관절 마찰·관절 추가 관성(<a href="https://mujoco.readthedocs.io/en/stable/XMLreference.html#body-joint-armature">armature</a>)·자세를 변화시켰습니다. 학습 중에는 주기적으로 외부 밀기 힘을 가했습니다. 기본 구성의 일곱 커리큘럼 항은 모두 2,000회차에서 최종 단계에 도달하며, 이후에는 해당 설정을 유지합니다.</p>
+<p class="note">보행 과제의 보상은 15개 항으로 구성되며, 별도의 낙상·종료 벌점은 없습니다. 초기 점프 과제에는 낙상 벌점 −500을 적용했고, 이후 실험에서는 이를 단계적으로 도입했습니다. 두 구성의 차이는 결과를 해석할 때 확인할 조건 중 하나입니다.</p>
 
-
-<h2>이 방식은 어디쯤인가</h2>
-<p style="font-size:14.8px">여기 쓴 구성은 특별한 게 아니라 <b>지금 다리 달린 로봇 학습의 표준</b>입니다. GPU 위에서 수천 개 환경을 동시에 굴리고 PPO로 학습하는 방식은 2021년 이후 이 분야의 기본기가 됐습니다. Isaac Lab 계열과 MuJoCo Warp 계열이 같은 자리를 놓고 경쟁하고, Unitree G1이나 Booster T1 같은 상용 휴머노이드도 이 틀에서 학습합니다.</p>
-<p style="font-size:14.8px">세부도 관례를 따릅니다. <b>비대칭 액터-크리틱</b>으로 크리틱에만 특권 정보를 주는 것, <b>도메인 무작위화</b>를 시작·초기화·주기 세 시점에 거는 것, <b>커리큘럼</b>으로 과제를 서서히 어렵게 만드는 것, 정규화기를 <b>ONNX</b> 그래프에 구워 실기로 넘기는 것까지 전부 실기 이식을 염두에 둔 표준 경로입니다.</p>
-<p style="font-size:14.8px;margin-bottom:6px"><b>반면 여기서 쓰지 않은 것들이 지금의 프론티어입니다.</b></p>
-<ul style="font-size:14.6px;color:var(--mut);margin:0 0 14px;padding-left:20px;line-height:1.75">
-  <li><b>사람 동작 모방</b> — 보상을 손으로 설계하는 대신 모션캡처를 리타게팅해 베끼게 하는 방식. 이 프로젝트는 점프 보상을 사람이 한 줄씩 짰고, 그래서 벌점 하나로 정책이 행동을 통째로 포기하는 일이 생겼습니다.</li>
-  <li><b>교사-학생 증류</b> — 특권 정보를 보는 교사를 먼저 학습하고, 고유수용 감각이나 카메라만 보는 학생에게 옮기는 방식. 지각 기반 보행의 사실상 표준입니다. 여기서는 RGB 학생 관측 인터페이스까지 만들고 멈췄습니다.</li>
-  <li><b>휴머노이드 파운데이션 모델</b> — 여러 로봇과 과제를 한 모델로 묶는 층. 이 파이프라인의 위에 얹히는 것이지 대체하는 것이 아닙니다.</li>
+<h2>피지컬 AI 관점에서의 실험 범위</h2>
+<p>이 실험은 로봇이 자신의 상태와 명령을 관측하고, 행동의 결과를 보상으로 받아 움직임을 학습하는 과정을 다룹니다. 병렬 시뮬레이션에서 경험을 수집하고, 보상 설계와 초기 정책을 바꾸며 보행·점프·기립 성능을 비교합니다.</p>
+<p>핵심은 동작의 외형뿐 아니라 <b>정책이 어떤 조건에서 동작을 습득하고, 유지하거나 잃는지</b>를 확인하는 데 있습니다. 보상값, 성공률, 낙상률과 함께 평가 기준이 의도한 움직임을 제대로 구분하는지도 검토합니다.</p>
+<ul class="context-list">
+  <li><b>학습 방식</b> — 사람이 설계한 보상으로 PPO 정책을 학습했습니다. 사람의 동작 데이터를 이용한 모방학습은 적용하지 않았습니다.</li>
+  <li><b>시각 입력</b> — 단안 RGB 카메라를 사용하는 학생 정책의 관측 인터페이스를 구성하고 센서 입력을 점검했습니다. 교사 정책의 행동을 학생에게 전달하는 증류 학습의 성능 결과는 아직 없습니다.</li>
+  <li><b>적용 범위</b> — 특정 로봇의 동작별 정책을 대상으로 합니다. 여러 로봇과 과제를 포괄하는 범용 모델의 성능을 평가한 기록은 아닙니다.</li>
 </ul>
-<p style="font-size:14.5px;color:var(--mut)">정리하면 <b>배관은 현행 표준이고, 빠진 것은 "무엇을 가르칠지"를 사람이 손으로 설계했다는 점</b>입니다. 이 기록의 실패 대부분이 거기서 나왔습니다.</p>
 
-<h2>날짜별 기록</h2>
+<h2 id="daily-log">날짜별 실험 기록</h2>
 
 <article class="day">
   <p class="date">2026-09-01</p>
-  <h3>환경 구축과 첫 실행</h3>
-  <div class="did"><b>한 일</b><span>설치, GPU 경로 확인, 5회 반복짜리 짧은 실행 다섯 개, 한 시간 연속 열 테스트.</span></div>
-  <div class="got"><b>결과</b><span>1시간에 1,250회 반복. 온도와 처리량이 안정적. 학습을 걸어도 되는 상태 확인.</span></div>
-  <div class="learn"><b>교훈</b><span>본 실험 전에 한 시간짜리 연속 실행을 반드시 해보십시오. 노트북 GPU는 발열로 처리량이 떨어지는데, 5분 실행으로는 보이지 않습니다.</span></div>
-  <div class="setup"><b>설정</b><span>PPO · <code>rsl-rl 5.0.1</code><br>속도추종 평지 과제로 스모크 5회 + 1시간 연속. 환경 수와 처리량 한계 측정.</span></div>
+  <h3>학습 환경 구축과 연속 실행 점검</h3>
+  <div class="did"><b>수행 내용</b><span>의존성을 설치하고 GPU 사용 여부를 확인했습니다. 5회차 길이의 짧은 실행을 다섯 차례 수행한 뒤, 1시간 연속 실행으로 온도와 처리량을 점검했습니다.</span></div>
+  <div class="got"><b>관측 결과</b><span>1시간 동안 1,250회차를 수행했습니다. 이 구간에서 온도와 처리량이 안정적으로 유지되어 본 학습을 진행할 수 있는 상태임을 확인했습니다.</span></div>
+  <div class="learn"><b>해석</b><span>노트북 GPU의 장시간 처리량은 짧은 실행만으로 판단하기 어렵습니다. 본 실험에 앞서 연속 실행 구간을 두고 발열에 따른 속도 저하 여부를 확인할 필요가 있습니다.</span></div>
+  <div class="setup"><b>실험 설정</b><span>PPO · <code>rsl-rl 5.0.1</code><br>평지 속도 추종 과제. 짧은 동작 점검 5회와 1시간 연속 실행으로 병렬 환경 수에 따른 처리량을 확인했습니다.</span></div>
 </article>
 
 <article class="day">
   <p class="date">2026-09-02</p>
-  <h3>평지 보행 기준선, 그리고 후반 퇴행</h3>
-  <div class="did"><b>한 일</b><span>속도추종 평지 과제를 두 시드로 학습(각 6,000회 내외), 한 시드는 9,500회까지 연장. 험지 과제는 웜스타트로 18,249회 완주.</span></div>
-  <div class="got"><b>결과</b><span>험지는 완주했고 최종 평균 보상 100.21. 그런데 평지에서 <span class="fail">후반에 성능이 나빠지는 현상</span>을 발견했습니다. 6,000회차 체크포인트의 낙상률이 34~38%로, 그 전 체크포인트보다 나빴습니다.</span></div>
-  <div class="learn"><b>교훈</b><span>마지막 체크포인트가 최선이라고 가정하지 마십시오. 이 과제에는 <b>낙상 벌점이 아예 없습니다.</b> 넘어져도 정책이 손해를 안 보니 더 공격적인 쪽으로 계속 밀려갈 수 있습니다. 게다가 질량중심 무작위화를 ±30mm까지 올린 구간이 발 지지면을 벗어났고, 퇴행이 나타난 시점이 그 증가 시점과 맞았습니다. 상한을 ±15mm로 되돌렸습니다. 원인 추정은 검증되지 않았다고 명시해 두었습니다.</span></div>
-  <div class="setup"><b>설정</b><span>PPO · <code>Mjlab-Velocity-Flat</code> / <code>-Rough</code><br>시드 42·43 병행. 험지는 평지 정책에서 웜스타트. 체크포인트 250회마다.</span></div>
+  <h3>보행 기준선 확보와 학습 후반의 성능 저하</h3>
+  <div class="did"><b>수행 내용</b><span>평지 속도 추종 과제를 두 시드에서 각각 약 6,000회차 학습하고, 한 시드는 9,500회차까지 연장했습니다. 험지 과제는 평지 정책에서 시작해 18,249회차까지 학습했습니다.</span></div>
+  <div class="got"><b>관측 결과</b><span>험지 학습의 최종 평균 보상은 100.21이었습니다. 평지에서는 <span class="fail">학습 후반에 성능이 저하</span>됐으며, 6,000회차 체크포인트의 낙상률은 34~38%로 이전 체크포인트보다 높았습니다.</span></div>
+  <div class="learn"><b>해석</b><span>최종 체크포인트가 가장 좋은 정책은 아니었습니다. 낙상 벌점이 없는 보상 구성과 질량중심 무작위화 범위를 원인 후보로 검토했습니다. 질량중심 범위를 ±30mm까지 확대한 구성에서 지지 영역을 벗어날 가능성을 고려해 상한을 ±15mm로 조정했습니다. 다만 이 변경과 성능 저하의 인과관계는 분리 실험으로 확인하지 못했습니다.</span></div>
+  <div class="setup"><b>실험 설정</b><span>PPO · <code>Mjlab-Velocity-Flat</code> / <code>-Rough</code><br>시드 42·43. 험지는 평지 정책에서 웜스타트했으며, 체크포인트는 250회차 간격으로 저장했습니다.</span></div>
 </article>
 
 <article class="day">
   <p class="date">2026-09-03</p>
-  <h3>계단 한계 측정, 점프 타당성, 그리고 같은 날의 정정</h3>
-  <div class="did"><b>한 일</b><span>계단 높이를 바꿔가며 넘을 수 있는 한계를 쟀습니다. 점프가 물리적으로 가능한지 계산했습니다. 앉았다 일어서기 과제를 새로 열었습니다.</span></div>
-  <div class="got"><b>결과</b><span>계단은 실용 한계가 <b>약 1cm</b>였습니다(낙상률 40% 미만 기준). 원인은 학습 커리큘럼의 계단 범위였습니다. 앉았다 일어서기는 13,000회차에서 한 사이클 성공률 66.4%.</span></div>
-  <div class="learn"><b>교훈</b><span>점프 상한을 <b>0.91cm로 계산했다가 같은 날 밤에 틀렸음을 발견</b>했습니다. 기준점을 발목에 두고 계산했는데 실제로는 발끝이 지면을 미는 지점이었습니다. 다시 계산하니 낙관적 상한이 4~6cm였습니다. 틀린 값을 지우지 않고 정정 항목을 새로 추가했습니다.</span></div>
-  <div class="setup"><b>설정</b><span>PPO · <code>Mjlab-Stairs-Rough-MicroDuck</code> · <code>Mjlab-SitStand-Flat-MicroDuck</code><br>계단은 학습이 아니라 기존 정책의 <b>평가 스윕</b>. 앉았다 일어서기는 2,048환경 신규 학습. 자세 평가는 <code>evaluate_squat.py</code>(128환경 스크립트 프로토콜).</span></div>
+  <h3>계단 통과 한계 평가와 점프 높이 추정의 정정</h3>
+  <div class="did"><b>수행 내용</b><span>계단 높이를 바꾸며 기존 정책의 통과 성능을 평가했습니다. 점프의 물리적 가능성을 계산하고, 앉았다 일어서기 과제의 학습을 시작했습니다.</span></div>
+  <div class="got"><b>관측 결과</b><span>낙상률 40% 미만을 기준으로 한 계단 높이의 한계는 약 1cm였습니다. 당시 학습 커리큘럼의 계단 범위를 성능 제한 요인으로 검토했습니다. 앉았다 일어서기는 13,000회차에서 한 사이클 성공률 66.4%를 기록했습니다.</span></div>
+  <div class="learn"><b>정정·해석</b><span>점프 높이의 상한을 처음에는 0.91cm로 계산했으나, 같은 날 계산 기준점의 오류를 확인했습니다. 발목 대신 발끝의 지면 접촉점을 기준으로 다시 계산한 낙관적 상한은 4~6cm였습니다. 이는 실제 도약 높이를 측정한 값이 아닌 계산상 추정치입니다. 초기 값과 정정 사유를 함께 남겼습니다.</span></div>
+  <div class="setup"><b>실험 설정</b><span>PPO · <code>Mjlab-Stairs-Rough-MicroDuck</code> · <code>Mjlab-SitStand-Flat-MicroDuck</code><br>계단은 기존 정책의 조건별 평가입니다. 앉았다 일어서기는 2,048개 환경에서 새로 학습했으며, <code>evaluate_squat.py</code>의 128개 환경 평가 절차를 사용했습니다.</span></div>
 </article>
 
 <article class="day">
   <p class="date">2026-09-04</p>
-  <h3>제자리 점프는 안 되고, 달리다 뛰는 건 됐다</h3>
-  <div class="did"><b>한 일</b><span>제자리 점프를 8,000회까지 학습. 실패 후 보상 설계를 바꾼 2판. 동시에 달리면서 뛰는 과제를 병행.</span></div>
-  <div class="got"><b>결과</b><span>제자리 점프는 <span class="fail">8,000회까지 이륙 자체가 없었습니다.</span> 반면 달리기 점프에서는 <span class="ok">처음으로 측정 가능한 도약</span>이 나왔습니다. 깨끗한 점프 11%, 평균 상승 0.63cm.</span></div>
-  <div class="learn"><b>교훈</b><span>정책의 엔트로피를 보십시오. 14차원 행동공간에서 엔트로피가 −10.2까지 떨어져 있었습니다. 탐색이 죽은 상태라 아무리 오래 돌려도 새 동작이 나오지 않습니다. 오래 돌리는 게 답이 아닐 때가 있습니다.</span></div>
-  <div class="setup"><b>설정</b><span>PPO · <code>Mjlab-Jump-Stand-MicroDuck</code> v1·v2 · <code>Mjlab-Jump-Run-MicroDuck</code> v2<br>평지 보행 정책에서 웜스타트. 실행은 <code>jump_stand_run.sh</code>(환경변수 <code>TASK</code>/<code>TAG</code>/<code>LOAD_RUN</code>/<code>LOAD_CK</code>/<code>ITERS</code>). 점프 신호는 <code>JumpTriggerCommand</code>.</span></div>
+  <h3>제자리 점프의 학습 정체와 달리기 점프의 초기 결과</h3>
+  <div class="did"><b>수행 내용</b><span>제자리 점프를 8,000회차까지 학습했습니다. 도약이 나타나지 않아 보상을 수정한 v2를 구성하고, 달리기 점프 과제도 병행했습니다.</span></div>
+  <div class="got"><b>관측 결과</b><span>제자리 점프에서는 <span class="fail">8,000회차까지 이륙이 관측되지 않았습니다.</span> 달리기 점프에서는 유효 점프 비율 11%, 평균 상승 높이 0.63cm를 기록했습니다.</span></div>
+  <div class="learn"><b>해석</b><span>14차원 행동 분포의 엔트로피가 −10.2까지 감소했습니다. 도약이 나타나지 않은 결과와 함께 보면 탐색 범위가 좁아졌을 가능성이 있습니다. 학습 시간을 늘리는 것과 별개로 행동 분포와 보상 구성을 점검할 필요가 있었습니다.</span></div>
+  <div class="setup"><b>실험 설정</b><span>PPO · <code>Mjlab-Jump-Stand-MicroDuck</code> v1·v2 · <code>Mjlab-Jump-Run-MicroDuck</code> v2<br>평지 보행 정책에서 웜스타트했습니다. 실행 스크립트는 <code>jump_stand_run.sh</code>, 주요 변수는 <code>TASK</code>·<code>TAG</code>·<code>LOAD_RUN</code>·<code>LOAD_CK</code>·<code>ITERS</code>입니다. 점프 명령에는 <code>JumpTriggerCommand</code>를 사용했습니다.</span></div>
 </article>
 
 <article class="day">
   <p class="date">2026-09-05</p>
-  <h3>기준 궤적은 뜨지만 넘어진다 — 핵심 진단</h3>
-  <div class="did"><b>한 일</b><span>웅크렸다 발끝으로 차는 기준 궤적을 직접 만들어 개루프로 재생했습니다. 그 궤적을 참고 신호로 준 4판을 학습했습니다.</span></div>
-  <div class="got"><b>결과</b><span>기준 궤적은 <span class="ok">실제로 떴습니다.</span> 체공 86밀리초, 높이 4.75cm. 그런데 <span class="fail">100% 넘어졌습니다.</span> 달리기 3판은 깨끗한 점프 17%(주행 조건 22%), 최대 4.1cm로 최고 기록. 제자리 4판은 17,798회차에서 뛰기 시작했다가 18,551회차에서 <span class="fail">다시 안 뛰기로 후퇴</span>했습니다.</span></div>
+  <h3>기준 궤적의 도약 확인과 착지 안정성 문제</h3>
+  <div class="did"><b>수행 내용</b><span>웅크린 뒤 발끝으로 지면을 밀어내는 기준 궤적을 만들고, 피드백 없이 궤적을 재생하는 개루프 시험을 수행했습니다. 이 궤적을 관측에 추가한 v4 정책도 학습했습니다.</span></div>
+  <div class="got"><b>관측 결과</b><span>개루프 시험에서 체공 시간 86밀리초, 도약 높이 4.75cm를 기록했으나 낙상률은 100%였습니다. 달리기 점프 v3는 유효 점프 비율 17%(주행 조건 약 22%), 최대 상승 높이 4.1cm를 기록했습니다. 제자리 점프 v4는 17,798회차에서 도약이 나타났다가 18,551회차에서 다시 감소했습니다.</span></div>
   <div class="shots">
-    <figure><img src="media/runjump_v3.png" alt="달리기 점프 3판이 공중에 뜬 순간">
-      <figcaption>달리기 점프 3판, 최고 기록이 나온 순간.</figcaption></figure>
-    <figure><img src="media/standjump_v4.png" alt="제자리 점프 4판의 자세">
-      <figcaption>제자리 점프 4판. 뛰었다가 후퇴한 그 정책.</figcaption></figure>
+    <figure><img src="media/runjump_v3.png" alt="시뮬레이션에서 도약하는 달리기 점프 v3 정책">
+      <figcaption>달리기 점프 v3의 시뮬레이션 도약 장면.</figcaption></figure>
+    <figure><img src="media/standjump_v4.png" alt="제자리 점프 v4 정책의 시뮬레이션 자세">
+      <figcaption>제자리 점프 v4. 학습 회차에 따라 도약 행동이 달라졌습니다.</figcaption></figure>
   </div>
-  <div class="learn"><b>교훈</b><span>이 프로젝트에서 가장 중요한 발견입니다. 낙상 벌점이 −500인 상태에서, 정책은 뛰면 넘어지니까 <b>뛰기를 포기하는 쪽이 이득</b>이라고 학습했습니다. 뛰는 법을 못 배운 게 아니라 배웠다가 버린 겁니다. 처방은 순서를 바꾸는 것입니다. <b>착지를 먼저 가르치고 그다음에 점프를 가르친다.</b></span></div>
-  <div class="setup"><b>설정</b><span>PPO · <code>Jump-Stand-v3·v4</code> · <code>Jump-Run-v3·v4</code> · <code>Mjlab-Land-Flat-MicroDuck</code>(준비)<br>v4는 웅크렸다 차는 <b>기준 궤적을 관측에 추가</b>한 구성. 개루프 재생은 학습 없이 궤적만 물리에 넣어 확인. 평가는 신호 1,536회 기준 자체 평가기.</span></div>
+  <div class="learn"><b>해석</b><span>도약 후 낙상이 잦고 낙상 벌점이 −500인 조건에서는, 도약을 줄이는 행동이 보상 측면에서 유리해질 수 있다고 해석했습니다. 이에 착지를 먼저 학습하는 방안을 후속 가설로 제안했습니다. 이 가설은 <a href="#log-20260924">9월 23~24일의 비교 실험</a>에서 기대한 개선으로 이어지지 않았습니다.</span></div>
+  <div class="setup"><b>실험 설정</b><span>PPO · <code>Jump-Stand-v3·v4</code> · <code>Jump-Run-v3·v4</code> · <code>Mjlab-Land-Flat-MicroDuck</code> 준비<br>v4에는 기준 궤적을 관측에 추가했습니다. 개루프 시험은 정책 학습 없이 궤적을 물리 시뮬레이션에 적용했으며, 정책 평가는 점프 신호 1,536회를 기준으로 자체 평가기를 사용했습니다.</span></div>
 </article>
 
 <article class="day">
   <p class="date">2026-09-06</p>
-  <h3>보행 미세조정 A/B와 카메라 학습 경로 준비</h3>
-  <div class="did"><b>한 일</b><span>속도추종 보상 커널의 폭을 좁힌 미세조정을 대조군과 A/B로 비교했습니다. 별도로 단안 카메라만 쓰는 학생 정책 인터페이스를 만들었습니다.</span></div>
-  <div class="got"><b>결과</b><span><span class="fail">가설 기각.</span> 추종 성능이 좋아지지 않았고, 오히려 제자리 회전 능력을 잃었습니다. 밀기에 대한 강건성은 동등했습니다.</span></div>
-  <div class="learn"><b>교훈</b><span>기각된 A/B도 기록할 가치가 있습니다. 다음 사람이 같은 걸 다시 시도하지 않습니다. 그리고 카메라 학습 경로를 만들 때는 <b>정보 누출 감사</b>를 먼저 하십시오. 깊이나 특권 정보가 학생 관측에 섞이면 결과가 전부 무의미해집니다.</span></div>
-  <div class="setup"><b>설정</b><span>PPO · 속도추종 미세조정 A/B<br>추종 커널 분산만 0.1 → 0.025로 바꾼 대조 실험. 두 팔 모두 같은 종료 상태 커리큘럼에서 출발. 별도로 <code>lab_vision/</code>에 단안 RGB 학생 관측군 추가(누출 감사 포함).</span></div>
+  <h3>속도 추종 보상 비교와 시각 관측 인터페이스 구성</h3>
+  <div class="did"><b>수행 내용</b><span>속도 추종 보상 커널의 폭을 좁힌 미세조정 정책을 대조군과 비교했습니다. 별도로 단안 RGB 카메라를 입력받는 학생 정책의 관측 인터페이스를 구성했습니다.</span></div>
+  <div class="got"><b>관측 결과</b><span>보상 커널 변경에 따른 추종 성능의 개선은 관측되지 않았고, 제자리 회전 성능은 저하됐습니다. 외부 밀기에 대한 강건성은 대조군과 유사했습니다.</span></div>
+  <div class="learn"><b>해석</b><span>이번 조건에서는 보상 커널을 좁히면 추종 성능이 개선된다는 가설이 지지되지 않았습니다. 시각 기반 정책의 경우, 실행 시 사용할 수 없는 깊이 정보나 특권 상태가 학생 관측에 포함되지 않도록 입력 항목을 점검했습니다.</span></div>
+  <div class="setup"><b>실험 설정</b><span>PPO · 속도 추종 미세조정 A/B 비교<br>커널 분산만 0.1에서 0.025로 변경했고, 두 실험군 모두 커리큘럼이 최종 단계에 도달한 동일 조건에서 시작했습니다. <code>lab_vision/</code>에 단안 RGB 학생 관측 구성을 추가하고 정보 누출 여부를 점검했습니다.</span></div>
 </article>
 
 <article class="day">
   <p class="date">2026-09-08</p>
-  <h3>카메라가 껍데기 안쪽을 보고 있었다</h3>
-  <div class="did"><b>한 일</b><span>렌더링된 카메라 프레임이 계속 어둡게 나오는 문제를 추적했습니다.</span></div>
-  <div class="got"><b>결과</b><span>근본 원인을 찾았습니다. 모델 파일의 머리 카메라가 <b>부드러운 턱 껍데기 안쪽에서 뒤쪽을 향하고</b> 있었습니다. CPU 레이캐스트로 증명한 뒤 전방을 보도록 자세를 잡았습니다. 프레임 평균 밝기가 255 중 70으로 회복됐습니다.</span></div>
+  <h3>카메라 시야 가림의 원인 확인과 방향 수정</h3>
+  <div class="did"><b>수행 내용</b><span>렌더링된 카메라 영상이 지속해서 어둡게 나타나는 원인을 조사했습니다.</span></div>
+  <div class="got"><b>관측 결과</b><span>모델의 머리 카메라가 턱 외피 안쪽에서 뒤쪽을 향하고 있었습니다. CPU 레이캐스트로 시선과 가림을 확인한 뒤 전방을 보도록 방향을 수정했습니다. 수정 후 영상의 평균 밝기는 0~255 척도에서 약 70이었습니다.</span></div>
   <div class="pair">
-    <div><img src="media/cam_before.png" alt="수정 전 거의 검은 카메라 프레임">
-      <span class="tag">수정 전 · 09-06</span></div>
-    <div><img src="media/cam_after.png" alt="수정 후 장면이 보이는 카메라 프레임">
-      <span class="tag">수정 후 · 09-08</span></div>
+    <div><img src="media/cam_before.png" alt="카메라 방향 수정 전의 어두운 RGB 관측"><span class="tag">수정 전 · 09-06</span></div>
+    <div><img src="media/cam_after.png" alt="카메라 방향 수정 후 전방 장면이 보이는 RGB 관측"><span class="tag">수정 후 · 09-08</span></div>
   </div>
-  <p style="font-size:12.5px;color:var(--mut);margin:7px 0 10px">학생 정책이 실제로 받던 64×48 RGB 관측입니다. 왼쪽은 껍데기 안쪽을 보고 있던 상태입니다.</p>
-  <div class="learn"><b>교훈</b><span>센서가 이상하면 값을 의심하기 전에 <b>센서가 어디를 보고 있는지</b>부터 그려보십시오. 렌더 파이프라인을 며칠 의심하는 것보다 레이캐스트 한 번이 빠릅니다.</span></div>
-  <div class="setup"><b>설정</b><span>진단 작업 (학습 없음) → <code>StandUp-Flat</code> 착수<br>어두운 프레임은 CPU 레이캐스트로 원인 규명. 기립 과제는 2,048환경 PPO, 평가 기준을 <b>학습 전에</b> 문서로 등록.</span></div>
+  <p class="media-note">학생 정책용 64×48 RGB 관측의 수정 전후 비교입니다. 수정 전에는 카메라 시야가 외피 내부에 가려져 있었습니다.</p>
+  <div class="learn"><b>해석</b><span>영상 이상을 진단할 때는 카메라의 위치·방향과 시야 가림을 먼저 확인하는 것이 유용했습니다. 센서 배치의 문제를 렌더링 처리 과정의 오류와 구분할 수 있었습니다.</span></div>
+  <div class="setup"><b>실험 설정</b><span>카메라 진단 · <code>StandUp-Flat</code> 학습 준비<br>카메라 진단에는 정책 학습을 수행하지 않았습니다. 별도로 기립 과제를 2,048개 환경의 PPO 구성으로 준비하고, 학습 전에 평가 기준을 문서화했습니다.</span></div>
 </article>
 
 <article class="day">
   <p class="date">2026-09-09</p>
-  <h3>넘어진 자세에서 일어나기 — 명확한 실패</h3>
-  <div class="did"><b>한 일</b><span>기립 과제를 5,000회 학습하고, <b>평가 기준을 미리 등록한 뒤</b> 정해진 넘어진 자세들에서 시험했습니다.</span></div>
-  <div class="got"><b>결과</b><span>앉은 자세에서 일어서기 <span class="ok">98.4%</span>, 선 자세 유지 <span class="ok">100%</span>. 그러나 엎드린 자세에서 <span class="fail">0%</span>, 누운 자세에서도 <span class="fail">0%</span>입니다. 엎드린 자세에서는 약 35도까지 몸을 들었다가 거기서 멈췄습니다. <b>판정: 실패.</b></span></div>
-  <div class="learn"><b>교훈</b><span>평가 기준을 <b>학습 전에 글로 못박아 두십시오.</b> 결과를 보고 기준을 정하면 실패를 성공으로 읽게 됩니다. 이번에도 채점기에 버그가 있어 고쳤지만, 원자료는 건드리지 않고 다시 채점하는 도구를 따로 만들었습니다.</span></div>
-  <div class="setup"><b>설정</b><span>PPO · <code>StandUp-Flat</code> 5,000회차 결과<br>평가는 <code>recov_eval.sh</code> 체인. 넘어진 자세를 고정 조건으로 지정하고 일어서서 <b>버티는 것까지</b> 성공으로 셈. 채점기 수정 후 원자료는 그대로 두고 재채점 도구를 따로 만듦.</span></div>
+  <h3>낙상 후 기립 평가: 엎드린 자세와 누운 자세에서 미달</h3>
+  <div class="did"><b>수행 내용</b><span>기립 과제를 5,000회차 학습하고, 사전에 정한 초기 자세와 성공 기준으로 평가했습니다.</span></div>
+  <div class="got"><b>관측 결과</b><span>앉은 자세에서 일어서기는 98.4%, 선 자세 유지는 100%였습니다. 반면 엎드린 자세와 누운 자세의 성공률은 각각 0%였습니다. 엎드린 자세에서는 몸통을 약 35도까지 들어 올린 뒤 멈췄습니다. <span class="fail">낙상 후 기립이라는 목표에는 도달하지 못했습니다.</span></span></div>
+  <div class="learn"><b>해석</b><span>앉은 자세의 기립 성능만으로 낙상 복구 성능을 대표할 수는 없습니다. 초기 자세별 결과를 분리해 평가해야 합니다. 평가기 오류를 수정할 때는 원자료를 보존하고 별도의 재채점 도구를 만들어 결과를 다시 산출했습니다.</span></div>
+  <div class="setup"><b>실험 설정</b><span>PPO · <code>StandUp-Flat</code> · 5,000회차<br><code>recov_eval.sh</code>로 평가했습니다. 초기 자세를 고정하고, 일어선 뒤 자세를 유지한 경우를 성공으로 판정했습니다.</span></div>
 </article>
 
+<article class="day" id="log-20260924">
+  <p class="date">2026-09-23 → 09-24</p>
+  <h3>제자리 점프의 초기 정책 비교: 보행 계열 정책과 착지 정책</h3>
+  <div class="did"><b>수행 내용</b><span>중단했던 연속 실험을 재개했습니다. 착지 정책을 3,000회차 학습한 뒤, 동일한 점프 과제를 서로 다른 초기 정책에서 학습했습니다. v5는 기존 달리기 정책, v6는 새로 학습한 착지 정책에서 시작했습니다. 두 구성 모두 낙상 벌점을 커리큘럼으로 도입했습니다.</span></div>
+  <div class="got"><b>관측 결과</b><span>제자리 점프 v5의 유효 점프 비율은 16.1%, 평균 상승 높이는 0.86cm, 최대 상승 높이는 3.60cm였습니다. 신호당 낙상률은 0.07%였습니다. 착지 정책에서 시작한 v6의 유효 점프 비율은 5.5%로, 이번 비교에서 보고한 대조군 5.3%와 비슷했습니다.</span></div>
+  <div class="learn"><b>해석</b><span><b>이번 조건에서는 착지 선행 학습의 이점을 확인하지 못했습니다.</b> 두 실험군의 차이는 초기 정책이므로, 16.1%와 5.5%의 차이만으로 벌점 커리큘럼의 효과를 분리해 설명할 수는 없습니다. 착지 정책의 행동 특성이 도약 탐색을 제한했을 가능성은 후속 검토 대상입니다. 시드 43에서 수행한 비교이므로 다른 시드에서도 같은 경향이 나타나는지 확인해야 합니다.</span></div>
+  <div class="setup"><b>실험 설정</b><span>PPO · <code>Mjlab-Land-Flat-MicroDuck</code> 3,000회차 → <code>Mjlab-Jump-Stand-v5</code> · <code>Jump-Run-v5</code> 각 6,000회차, 초기 정책을 바꿔 두 차례 실행<br>4,096개 환경 · 시드 43 · 총 20시간 7분. <code>chain_resume.sh</code>는 원본에서 v4 완료 대기만 제거해 새 이름으로 배포한 사본입니다. Windows 작업 스케줄러로 대화형 세션과 분리해 실행했습니다. v5·v6는 이 기록에서 초기 정책을 구분하기 위한 표기입니다.</span></div>
+</article>
 
-<h2>코드가 어떻게 도는가</h2>
+<h2 id="jump-results">점프 평가 결과</h2>
+<p>표는 점프 신호 1,536회에 대한 <b>제자리 조건</b>의 평가값입니다. ‘유효 점프’는 기존 기록의 ‘깨끗한 점프(clean jump)’를 뜻하며, 자체 평가기가 점프로 판정한 비율입니다. 판정 임계값과 개별 원자료가 이 페이지에 제시되어 있지 않으므로 다른 실험의 성공률과 직접 비교할 때는 평가 정의를 먼저 맞춰야 합니다.</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>정책</th><th class="n">유효 점프</th><th class="n">신호당 낙상률</th><th class="n">평균 상승 높이</th><th class="n">최대 상승 높이</th></tr></thead>
+  <tbody>
+    <tr><td>대조군 (평지 보행)</td><td class="n">약 6%</td><td class="n">0.3%</td><td class="n">0.5 cm</td><td class="n">1.2 cm</td></tr>
+    <tr><td>달리기 점프 v2</td><td class="n">11%</td><td class="n">0.9%</td><td class="n">0.63 cm</td><td class="n">3.6 cm</td></tr>
+    <tr><td><b>달리기 점프 v3</b></td><td class="n"><b>17%</b></td><td class="n">0.3%</td><td class="n">1.00 cm</td><td class="n"><b>4.1 cm</b></td></tr>
+    <tr><td>제자리 점프 v1~v3</td><td class="n" colspan="4">대조군 수준으로 보고됨. 뚜렷한 개선 미확인</td></tr>
+    <tr><td>제자리 점프 v4</td><td class="n">15.9%</td><td class="n">0.07%</td><td class="n">0.84 cm</td><td class="n">2.97 cm</td></tr>
+    <tr><td><b>제자리 점프 v5 · 달리기 정책에서 시작</b></td><td class="n"><b>16.1%</b></td><td class="n"><b>0.07%</b></td><td class="n"><b>0.86 cm</b></td><td class="n">3.60 cm</td></tr>
+    <tr><td>제자리 점프 v6 · 착지 정책에서 시작</td><td class="n">5.5%</td><td class="n">0.39%</td><td class="n">0.44 cm</td><td class="n">1.23 cm</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="note">달리기 점프 v3는 별도의 주행 조건에서 유효 점프 비율 22.3%, 최대 상승 높이 4.72cm를 기록했습니다. v5·v6의 주행 조건 평가는 아직 수행하지 않았으므로, 달리기 성능의 직접 비교는 남아 있습니다.</p>
+<p class="note">v4에는 학습 도중 도약이 나타났다가 감소한 기록이 있습니다. 표의 평가값만으로 학습 후반의 성능을 대표한다고 보기는 어렵습니다. 표의 대조군 ‘약 6%’와 9월 23~24일 기록의 ‘5.3%’도 각각의 기록값을 유지했으며, 동일한 평가 실행에서 나온 값인지는 이 요약만으로 확인되지 않습니다.</p>
+<p class="note">v5·v6의 비교에서는 과제 정의를 유지하고 초기 정책을 바꿨습니다. 관측된 차이는 초기 정책 선택에 관한 결과로 해석하며, 벌점 커리큘럼의 독립적인 효과나 여러 시드에서의 재현성은 별도 실험으로 확인해야 합니다.</p>
+
+<h2>학습·평가 절차와 진단</h2>
 
 <div class="dia">
-  <p class="cap"><b>1 · 한 번의 학습 실행</b> — 스크립트 하나가 학습부터 평가·영상·기록까지 이어서 돌립니다. 빨간 지점이 실제로 끊겼던 곳입니다.</p>
+  <p class="cap"><b>1 · 학습부터 기록까지의 실행 절차</b><br>초기 점프 실험의 흐름입니다. 학습 후 체크포인트를 바탕으로 평가·영상 생성·기록을 수행합니다. 붉은 항목은 실제로 발생한 실행 중단 사례입니다.</p>
 <pre class="mermaid">
 flowchart TD
-  A["jump_stand_run.sh&lt;br/&gt;TASK · TAG · LOAD_RUN · LOAD_CK · ITERS"] --> B["mjlab 환경 조립&lt;br/&gt;관측·보상·이벤트·커리큘럼 매니저"]
-  B --> C["rsl-rl PPO 학습&lt;br/&gt;2048 환경 × 24 스텝"]
-  C --> D["체크포인트 250회마다&lt;br/&gt;model_N.pt"]
-  C --> E["TensorBoard 이벤트"]
-  D --> F["ONNX 내보내기&lt;br/&gt;정규화기 포함"]
-  D --> G["평가기&lt;br/&gt;신호 1536회 · 고정 조건"]
-  G --> H["결과 CSV · 매니페스트"]
-  D --> I["재생 영상 녹화"]
-  H --> J["보고서 · 일지 항목"]
+  A["jump_stand_run.sh&lt;br/&gt;TASK · TAG · LOAD_RUN · LOAD_CK · ITERS"] --> B["mjlab 환경 구성&lt;br/&gt;관측·보상·이벤트·커리큘럼"]
+  B --> C["rsl-rl PPO 학습&lt;br/&gt;2048개 환경 × 24스텝"]
+  C --> D["250회차 간격으로 저장&lt;br/&gt;model_N.pt"]
+  C --> E["TensorBoard 학습 기록"]
+  D --> F["ONNX 내보내기&lt;br/&gt;관측 정규화 포함"]
+  D --> G["고정 조건 평가&lt;br/&gt;점프 신호 1536회"]
+  G --> H["결과 CSV · 실행 명세"]
+  D --> I["시뮬레이션 영상 생성"]
+  H --> J["결과 보고서 · 훈련일지"]
   I --> J
-  C -. "세션 종료 시 사망" .-> X1["학습 중단&lt;br/&gt;13205 · 6512 회차"]
-  C -. "실행 중 스크립트 덮어씀" .-> X2["후처리 전체 유실"]
+  C -. "대화형 세션 종료" .-> X1["학습 중단&lt;br/&gt;13205 · 6512회차"]
+  C -. "실행 중 스크립트 교체" .-> X2["평가·영상·기록 미실행"]
   style X1 fill:#f6e5e5,stroke:#a33f3f
   style X2 fill:#f6e5e5,stroke:#a33f3f
 </pre>
 </div>
 
 <div class="dia">
-  <p class="cap"><b>2 · 비대칭 액터-크리틱</b> — 크리틱만 특권 정보를 봅니다. 실기에 올라가는 것은 액터뿐이라, 액터 관측에 시뮬레이터 전용 값이 섞이면 배포가 불가능해집니다.</p>
+  <p class="cap"><b>2 · 비대칭 액터-크리틱의 입력과 출력</b><br>기본 보행 구성에서 크리틱은 액터보다 15차원 많은 정보를 받습니다. 실행용 정책은 액터를 사용하므로, 액터 입력은 실행 환경에서 확보할 수 있는 값으로 구성해야 합니다. 아래 내보내기 경로가 실제 로봇에서의 검증 완료를 뜻하지는 않습니다.</p>
 <pre class="mermaid">
 flowchart LR
-  subgraph OBS["관측"]
+  subgraph OBS["관측 구성"]
     direction TB
-    P["고유수용 48&lt;br/&gt;각속도 3 · 중력투영 3&lt;br/&gt;관절위치 14 · 관절속도 14&lt;br/&gt;직전행동 14"]
-    C2["명령 13&lt;br/&gt;속도 3 · 머리자세 4 · 몸통자세 6"]
-    PR["특권 15&lt;br/&gt;시뮬레이터 전용"]
+    P["고유수용 관측 48&lt;br/&gt;각속도 3 · 중력 투영 3&lt;br/&gt;관절 위치 14 · 관절 속도 14&lt;br/&gt;직전 행동 14"]
+    C2["명령 13&lt;br/&gt;속도 3 · 머리 자세 4 · 몸통 자세 6"]
+    PR["특권 정보 15&lt;br/&gt;시뮬레이터 내부 상태"]
   end
-  P --> AC["액터 61&lt;br/&gt;512-256-128 ELU"]
+  P --> AC["액터 입력 61&lt;br/&gt;512-256-128 ELU"]
   C2 --> AC
-  P --> CR["크리틱 76&lt;br/&gt;512-256-128 ELU"]
+  P --> CR["크리틱 입력 76&lt;br/&gt;512-256-128 ELU"]
   C2 --> CR
   PR --> CR
   AC --> ACT["행동 14&lt;br/&gt;가우시안 · 스칼라 표준편차"]
-  CR --> V["가치 1"]
-  ACT --> ONNX["ONNX 내보내기&lt;br/&gt;실기 배포"]
-  V -. "학습에만 사용" .-> PPO["PPO 업데이트"]
+  CR --> V["가치 추정 1"]
+  ACT --> ONNX["ONNX 내보내기&lt;br/&gt;실행용 정책"]
+  V -. "학습에 사용" .-> PPO["PPO 갱신"]
   ACT --> PPO
   style PR fill:#f8f1e8,stroke:#a8642a
   style ONNX fill:#eaf0ea,stroke:#2f7d5a
@@ -315,120 +346,88 @@ flowchart LR
 </div>
 
 <div class="dia">
-  <p class="cap"><b>3 · 커리큘럼이 끝나는 시점</b> — 일곱 개 커리큘럼 항이 전부 2,000회차에서 최종 단계에 도달합니다. 그 뒤로 과제는 고정입니다. 후반 퇴행을 해석할 때 이 경계가 중요합니다.</p>
+  <p class="cap"><b>3 · 커리큘럼 진행과 후반 성능 저하</b><br>기본 구성의 일곱 커리큘럼은 2,000회차에서 최종 단계에 도달합니다. 이후의 성능 저하를 해석할 때는 커리큘럼 진행과 정책 갱신의 영향을 구분해야 합니다. 낙상 벌점의 부재는 검토한 원인 후보이며, 확인된 단일 원인은 아닙니다.</p>
 <pre class="mermaid">
 flowchart LR
-  S["0 회차&lt;br/&gt;학습 시작"] --> R["램프 구간&lt;br/&gt;0 to 2000&lt;br/&gt;머리자세 5단계 · 질량중심 ±15mm&lt;br/&gt;행동변화율 · 정지환경 비율"]
-  R --> F["2000 회차&lt;br/&gt;모든 커리큘럼 종료"]
-  F --> ST["고정 과제 구간&lt;br/&gt;2000 이후"]
-  ST --> REG["6000 회차 퇴행&lt;br/&gt;낙상률 34 to 38 퍼센트"]
-  REG --> Q["과제는 안 변했는데 왜 나빠지나&lt;br/&gt;낙상 벌점이 없어서 넘어져도 손해가 없다"]
+  S["0회차&lt;br/&gt;학습 시작"] --> R["단계적 변경 구간&lt;br/&gt;0~2000회차&lt;br/&gt;머리 자세 5단계 · 질량중심 ±15mm&lt;br/&gt;행동 변화율 · 정지 환경 비율"]
+  R --> F["2000회차&lt;br/&gt;커리큘럼 최종 단계 도달"]
+  F --> ST["2000회차 이후&lt;br/&gt;커리큘럼 설정 유지"]
+  ST --> REG["6000회차 평가&lt;br/&gt;낙상률 34~38%"]
+  REG -. "원인 검토" .-> Q["보상 구성·무작위화 범위 확인&lt;br/&gt;인과관계는 추가 검증 필요"]
   style REG fill:#f6e5e5,stroke:#a33f3f
   style Q fill:#f8f1e8,stroke:#a8642a
 </pre>
 </div>
 
 <div class="dia">
-  <p class="cap"><b>4 · 점프를 배웠다가 버린 구조</b> — 이 프로젝트에서 가장 중요한 인과입니다. 보상 설계가 만든 국소 최적입니다.</p>
+  <p class="cap"><b>4 · 점프 학습에 대한 가설과 후속 검토</b><br>9월 5일에는 도약 후 낙상에 따른 벌점이 도약 행동을 억제할 수 있다고 해석했습니다. 아래는 그 해석에서 출발한 검토 흐름입니다. 착지 선행, 벌점 커리큘럼, 보조력의 검증 상태를 구분했습니다.</p>
 <pre class="mermaid">
 flowchart TD
-  T["점프 과제&lt;br/&gt;낙상 벌점 -500 고정"] --> E1["탐색 초기&lt;br/&gt;뛰면 거의 항상 넘어진다"]
-  E1 --> R1["기대 보상&lt;br/&gt;뛴다 = 큰 음수"]
-  E1 --> R2["기대 보상&lt;br/&gt;안 뛴다 = 0 근처"]
-  R1 --> D["정책 선택&lt;br/&gt;안 뛰는 쪽이 이득"]
-  R2 --> D
-  D --> EN["엔트로피 붕괴&lt;br/&gt;14차원에서 -10.2&lt;br/&gt;탐색이 죽는다"]
-  EN --> N["오래 돌려도 새 동작이 안 나온다"]
-  T --> O["관측된 실제 궤적"]
-  O --> O1["17798 회차 뛰기 시작"]
-  O1 --> O2["18551 회차 다시 안 뛰기로 후퇴"]
-  N --> FIX["처방"]
-  O2 --> FIX
-  FIX --> F1["착지를 먼저 가르친다"]
-  FIX --> F2["벌점을 0에서 단계적으로 올린다"]
-  FIX --> F3["초기에 위로 당기는 보조력을 주고 줄인다"]
-  style D fill:#f6e5e5,stroke:#a33f3f
-  style EN fill:#f6e5e5,stroke:#a33f3f
-  style FIX fill:#eaf0ea,stroke:#2f7d5a
+  O["관측: 제자리 점프 v4&lt;br/&gt;17798회차 도약 출현&lt;br/&gt;18551회차 도약 감소"] --> H["가설&lt;br/&gt;도약 후 낙상 벌점이&lt;br/&gt;도약 행동을 억제할 가능성"]
+  H --> F1["착지 선행 학습"]
+  H --> F2["낙상 벌점의 단계적 도입"]
+  H --> F3["보조력의 단계적 감소"]
+  F1 --> R1["9월 23~24일 비교&lt;br/&gt;v5 16.1% · v6 5.5%&lt;br/&gt;이번 조건에서 이점 미확인"]
+  F2 --> R2["v5·v6에 공통 적용&lt;br/&gt;독립적인 효과는 추가 검증 필요"]
+  F3 --> R3["아직 적용하지 않음"]
+  style H fill:#f8f1e8,stroke:#a8642a
+  style R1 fill:#f6e5e5,stroke:#a33f3f
+  style R2 fill:#eaf0ea,stroke:#2f7d5a
 </pre>
 </div>
 
-
-<article class="day">
-  <p class="date">2026-09-23 → 09-24</p>
-  <h3>벌점을 단계적으로 올리니 제자리 점프가 풀렸다 — 그리고 착지 선행은 기각</h3>
-  <div class="did"><b>한 일</b><span>2주간 멈춰 있던 체인을 재개했습니다. 착지 3,000회차를 먼저 학습하고, 같은 점프 과제를 <b>웜스타트만 바꿔</b> 두 번 돌렸습니다. v5는 기존 달리기 정책에서, v6는 방금 만든 착지 정책에서 출발합니다. 과제 정의가 동일하므로 차이는 출발점 하나뿐입니다. 이 과제는 <b>낙상 벌점을 처음부터 −500으로 고정하지 않고 커리큘럼으로 도입</b>합니다.</span></div>
-  <div class="got"><b>결과</b><span><span class="ok">제자리 점프가 처음으로 대조군을 크게 넘었습니다.</span> 깨끗한 점프 16.1%, 평균 상승 0.86cm, 최대 3.60cm입니다. 9월 5일까지 제자리 점프는 대조군 수준이었습니다. 낙상률도 신호당 0.07%로 전 실험 중 가장 낮습니다. 뛰면서도 안 넘어집니다. 반면 <span class="fail">착지를 먼저 배운 v6는 5.5%로 주저앉았습니다.</span> 대조군 5.3%와 같은 수준입니다.</span></div>
-  <div class="learn"><b>교훈</b><span>둘 다 중요합니다. 하나는 <b>벌점은 크기가 아니라 언제 주느냐가 문제였다</b>는 것입니다. 같은 −500이라도 처음부터 걸면 정책이 행동을 포기하고, 나중에 올리면 행동이 자리잡은 뒤라 유지됩니다. 다른 하나는 <b>착지 선행 가설이 틀렸다</b>는 것입니다. 직관적으로는 맞아 보였고 9월 5일에 제가 세운 처방이었지만, 데이터는 반대입니다. 넘어지지 않고 내려앉는 법을 먼저 배우면 "뜨지 않는 것이 가장 안전하다"는 쪽으로 굳는 것으로 보입니다.</span></div>
-  <div class="setup"><b>설정</b><span>PPO · <code>Mjlab-Land-Flat-MicroDuck</code> 3,000회차 → <code>Mjlab-Jump-Stand-v5</code> · <code>Jump-Run-v5</code> 각 6,000회차 ×2(웜스타트만 상이)<br>4,096환경, 시드 43. 실행은 <code>chain_resume.sh</code>(원본 체인에서 v4 완주 대기만 제거한 사본, 새 이름으로 배포). 윈도우 예약 작업으로 세션과 분리. 총 20시간 7분.</span></div>
-</article>
-
-<h2>점프 결과 요약</h2>
-<div class="scroll">
-<table>
-  <thead><tr><th>정책</th><th class="n">깨끗한 점프</th><th class="n">신호당 낙상</th><th class="n">평균 상승</th><th class="n">최대</th></tr></thead>
-  <tbody>
-    <tr><td>대조군 (평지 보행)</td><td class="n">약 6%</td><td class="n">0.3%</td><td class="n">0.5 cm</td><td class="n">1.2 cm</td></tr>
-    <tr><td>달리기 점프 2판</td><td class="n">11%</td><td class="n">0.9%</td><td class="n">0.63 cm</td><td class="n">3.6 cm</td></tr>
-    <tr><td><b>달리기 점프 3판</b></td><td class="n"><b>17%</b></td><td class="n">0.3%</td><td class="n">1.00 cm</td><td class="n"><b>4.1 cm</b></td></tr>
-    <tr><td>제자리 점프 1~3판</td><td class="n" colspan="4">대조군 수준. 유의미한 도약 없음</td></tr>
-    <tr><td>제자리 점프 4판</td><td class="n">15.9%</td><td class="n">0.07%</td><td class="n">0.84 cm</td><td class="n">2.97 cm</td></tr>
-    <tr><td><b>제자리 점프 5판 · 벌점 커리큘럼</b></td><td class="n"><b>16.1%</b></td><td class="n"><b>0.07%</b></td><td class="n"><b>0.86 cm</b></td><td class="n">3.60 cm</td></tr>
-    <tr><td>제자리 점프 6판 · 착지 선행</td><td class="n">5.5%</td><td class="n">0.39%</td><td class="n">0.44 cm</td><td class="n">1.23 cm</td></tr>
-  </tbody>
-</table>
-</div>
-<p style="font-size:14.5px;color:var(--mut)">신호 1,536회 기준, 전부 제자리 조건. 달리기 점프 3판은 주행 조건에서 22.3%, 최대 4.72cm까지 올라갑니다. 5판과 6판은 아직 주행 조건 평가를 돌리지 않아 달리기끼리의 공정한 비교는 남아 있습니다.</p>
-<p style="font-size:14.5px;color:var(--mut)"><b>이 표의 핵심은 5판과 6판의 대비입니다.</b> 둘은 같은 과제 정의이고 출발 정책만 다릅니다. 16.1% 대 5.5%는 벌점 커리큘럼의 효과가 아니라 <b>웜스타트 선택의 효과</b>입니다.</p>
-
-<h2>움직이는 것 보기</h2>
+<h2>시뮬레이션 영상</h2>
 <div class="clips">
-  <figure><video src="media/walk_flat.mp4" controls muted loop playsinline preload="metadata"></video>
-    <p class="cap">평지 보행, 6,000회차. 기준선이 되는 정책입니다.</p></figure>
-  <figure><video src="media/squat.mp4" controls muted loop playsinline preload="metadata"></video>
-    <p class="cap">앉았다 일어서기, 8,000회차. 내려갈 때 넘어지는 경향이 보입니다.</p></figure>
-  <figure><video src="media/jump_run_v3.mp4" controls muted loop playsinline preload="metadata"></video>
-    <p class="cap">달리기 점프 3판, 16,000회차. 가장 높이 뛴 정책입니다.</p></figure>
+  <figure><video src="media/walk_flat.mp4" aria-label="평지 보행 6000회차 시뮬레이션" controls muted loop playsinline preload="metadata"></video>
+    <p class="cap">평지 보행 · 6,000회차. 기준 정책의 동작을 확인하는 영상입니다.</p></figure>
+  <figure><video src="media/squat.mp4" aria-label="앉았다 일어서기 8000회차 시뮬레이션" controls muted loop playsinline preload="metadata"></video>
+    <p class="cap">앉았다 일어서기 · 8,000회차. 몸을 낮추는 과정에서 낙상하는 경향이 관찰됩니다.</p></figure>
+  <figure><video src="media/jump_run_v3.mp4" aria-label="달리기 점프 v3 16000회차 시뮬레이션" controls muted loop playsinline preload="metadata"></video>
+    <p class="cap">달리기 점프 v3 · 16,000회차. 도약과 착지 동작을 확인할 수 있습니다. 정량 결과는 위 평가표를 참고하세요.</p></figure>
 </div>
 
-<h2>되풀이하지 말 것</h2>
-<p style="font-size:14.8px;color:var(--mut);margin-bottom:16px">아래는 전부 <b>한동안 사실이라고 믿었던 틀린 숫자</b>들입니다. 논문의 방법론은 무엇이 잘못됐는지 적은 만큼만 믿을 수 있습니다.</p>
+<h2>측정 오류와 평가 시 확인할 사항</h2>
+<p>실험 과정에서 발견한 측정·집계 오류를 정리했습니다. 수치를 비교하기 전에 평가 길이, 종료 조건, 좌표계, 성공 판정이 같은 의미로 사용되는지 확인하는 데 참고할 수 있습니다.</p>
 <ol class="traps">
-  <li><b>에피소드 한계보다 짧게 평가하면 낙상률이 무조건 100%로 나옵니다</b>
-    1,000스텝 한계를 2,000스텝으로 평가하면 시간 초과가 불가능해져 끝난 에피소드가 전부 낙상으로 집계됩니다. 최소 3배 길이로 평가하십시오.</li>
-  <li><b>서로 다른 길이로 잰 낙상률을 비교하지 마십시오</b>
-    2,000스텝으로 잰 값과 3,500스텝으로 잰 값을 나란히 놓았다가 잘못된 결론을 냈습니다.</li>
-  <li><b>윈도우에서 GPU 메모리 사용량은 믿을 수 없습니다</b>
-    환경 2,048개가 4,096개보다 더 많은 메모리를 쓰는 것으로 보고됐습니다. 메모리 여유를 기준으로 실험을 멈추는 규칙은 세우지 마십시오.</li>
-  <li><b>속성 이름이 틀렸는데 예외를 삼켜서 조용히 결측이 됐습니다</b>
-    속도 값이 모든 높이에서 결측으로 나왔습니다. 맨 <code>except</code>가 오류를 먹고 있었습니다. 예외는 치명적으로 처리하십시오.</li>
-  <li><b>월드 좌표 이동거리는 평균이 0이 됩니다</b>
-    명령이 몸통 기준이고 초기 방향이 무작위라, 모두가 제대로 걸어도 월드 기준 X 변위 평균은 0.041m였습니다. 출발점 기준 평면 거리로 바꾸십시오.</li>
-  <li><b>지표가 의도한 것을 재고 있는지 확인하십시오</b>
-    계단을 몇 칸 올랐는지 재려던 지표가 모든 높이에서 같은 값이었습니다. 실은 걸을 때의 상하 흔들림을 재고 있었습니다. 결과에서 철회했습니다.</li>
-  <li><b>점프 판정에 자세 검사를 넣으십시오</b>
-    몸통이 거의 수평인 상태도 점프로 집계되고 있었습니다.</li>
-  <li><b>실행 중인 스크립트 파일을 덮어쓰지 마십시오</b>
-    bash는 스크립트를 파일 오프셋으로 읽습니다. 3시간짜리 학습이 도는 중에 같은 이름으로 배포했더니, 학습이 끝난 뒤 bash가 <b>새 파일의 엉뚱한 위치</b>부터 읽어 후처리 전체가 날아갔습니다. 학습 자체는 무사했지만 평가와 영상과 기록이 실행되지 않았습니다. 새 이름으로 배포하거나 끝날 때까지 기다리십시오.</li>
+  <li><b>낙상률의 분모와 에피소드 종료 사유를 확인합니다</b>
+    초기 평가에서는 낙상률이 100%로 집계되는 문제가 있었습니다. 평가 구간 안에 종료된 에피소드만 집계하면, 아직 진행 중인 정상 에피소드가 분모에서 빠질 수 있습니다. 평가 길이와 최대 에피소드 길이를 함께 기록하고, 낙상·시간 초과·미종료를 구분해야 합니다. 초기 기록의 스텝 수 설명에는 불일치가 있어 특정 길이 배수를 일반 규칙으로 제시하지 않습니다.</li>
+  <li><b>평가 길이가 다른 낙상률을 직접 비교하지 않습니다</b>
+    2,000스텝과 3,500스텝으로 평가한 낙상률을 같은 조건의 결과로 비교한 오류가 있었습니다. 비교 실험에서는 평가 길이와 초기 조건, 명령 분포를 맞춰야 합니다.</li>
+  <li><b>GPU 메모리 지표의 측정 범위를 확인합니다</b>
+    사용한 Windows·WSL2 환경에서는 병렬 환경 2,048개의 메모리 사용량이 4,096개보다 크게 보고된 사례가 있었습니다. 표시값만으로 가용 메모리를 판단하기보다 측정 도구, 다른 프로세스의 사용량, 실제 할당 실패 여부를 함께 확인해야 합니다.</li>
+  <li><b>측정 실패를 결측값으로 조용히 처리하지 않습니다</b>
+    잘못된 속성 이름으로 발생한 오류가 포괄적인 <code>except</code> 처리에 가려져 모든 계단 높이에서 속도가 결측으로 기록됐습니다. 핵심 지표를 계산하지 못한 경우에는 원인을 명시하고 해당 평가를 실패로 처리해야 합니다.</li>
+  <li><b>변위와 이동거리를 구분하고 좌표계를 맞춥니다</b>
+    몸통 기준 속도 명령과 무작위 초기 방향을 사용한 평가에서 월드 좌표계의 X 변위 평균은 0.041m였습니다. 서로 다른 진행 방향의 부호가 상쇄되므로 이 값만으로 보행 거리를 판단할 수 없습니다. 출발점에서의 평면 변위 크기나 명령 방향으로 투영한 변위처럼 평가 목적에 맞는 지표가 필요합니다.</li>
+  <li><b>지표가 의도한 동작을 측정하는지 검증합니다</b>
+    계단 통과 수를 측정하려던 지표가 계단 높이에 관계없이 비슷한 값을 보였습니다. 실제로는 보행 중 몸통의 상하 진동을 측정하고 있어 해당 결과를 철회했습니다.</li>
+  <li><b>점프 판정에는 자세 조건도 확인합니다</b>
+    몸통이 거의 수평인 상태까지 점프로 집계된 사례가 있었습니다. 단순한 높이 변화나 지면 이탈만으로 의도한 도약을 구분할 수 있는지 확인하고, 자세 기준을 명시해야 합니다.</li>
 </ol>
 
-<h2>운영에서 배운 것</h2>
+<h2>장시간 실험의 운영과 기록 관리</h2>
 <ol class="traps">
-  <li><b>긴 학습은 세션에서 분리해 띄우십시오</b>
-    대화형 세션의 백그라운드 작업이 두 번 통째로 종료됐습니다. 각각 13,205회차와 6,512회차에서였습니다. 250회마다 체크포인트를 남겨둔 덕에 둘 다 복구했습니다.</li>
-  <li><b>의존성 잠금을 함부로 갱신하지 마십시오</b>
-    구동기 모델이 가변 브랜치의 커밋에 묶여 있습니다. 잠금을 갱신하면 이미 학습한 모든 정책 아래에서 구동기 특성이 조용히 바뀝니다.</li>
-  <li><b>체크포인트는 해시로 참조하고 복사하지 마십시오</b>
-    결과물 디렉터리가 금방 수 기가바이트가 됩니다. 기록에는 해시만 남기고 실물은 원래 자리에 두십시오.</li>
+  <li><b>실행 중인 스크립트는 같은 경로에 덮어쓰지 않습니다</b>
+    약 3시간의 학습이 진행되는 동안 스크립트를 교체한 뒤, 학습 종료 후 이어져야 할 평가·영상 생성·기록이 실행되지 않았습니다. 실행본은 유지하고 수정본은 별도 이름으로 배포하거나, 기존 실행이 끝난 뒤 교체하는 방식으로 관리합니다.</li>
+  <li><b>장시간 학습은 대화형 세션과 분리합니다</b>
+    세션의 백그라운드 작업이 13,205회차와 6,512회차에서 각각 종료된 사례가 있었습니다. 250회차 간격으로 저장한 체크포인트에서 두 실행을 복구했습니다. 세션 종료의 영향을 받지 않는 실행 방식과 주기적인 저장을 함께 준비해야 합니다.</li>
+  <li><b>의존성 변경을 실험 조건의 변경으로 기록합니다</b>
+    구동기 모델이 특정 커밋에 연결되어 있으므로 의존성 잠금 파일을 갱신하면 모델의 동작 특성이 달라질 수 있습니다. 비교 실험에서는 사용한 커밋과 잠금 파일을 함께 보존하고, 갱신 전후를 별도 조건으로 관리합니다.</li>
+  <li><b>체크포인트는 보관 위치와 해시로 식별합니다</b>
+    결과물은 빠르게 수 기가바이트 규모로 커집니다. 보고서마다 파일을 복제하기보다 원본을 관리하고, 실행명·회차·보관 위치·해시를 기록하면 결과와 모델을 연결하기 쉽습니다. 별도의 백업 여부도 함께 관리합니다.</li>
 </ol>
 
-<h2>지금 상태</h2>
-<p>2026-09-24 08:17에 재개 체인이 완주하고 학습을 정지했습니다. 제자리 점프는 벌점 커리큘럼으로 풀렸습니다. 착지 선행 가설은 기각됐습니다.</p>
-<p>남은 일은 셋입니다. 첫째, 5판 정책을 <b>주행 조건</b>에서 평가해 3판과 공정하게 비교하는 것입니다. 둘째, 아직 넣지 않은 개선 두 가지입니다. 초기에 위로 당겼다가 줄이는 <b>보조력 커리큘럼</b>과, 토크 범위를 서서히 좁히되 탐색은 살려두는 <b>행동 스케일러 커리큘럼</b>입니다. 셋째, 기립 과제를 <b>자세별로 분리</b>하고 몸통 높이로 국면을 나누는 것입니다. 엎드린 자세와 누운 자세를 한 정책에 섞어 학습하면 서로 간섭한다는 것이 최근 연구에서 보고됐고, 9월 9일의 0%가 정확히 그 모양이었습니다.</p>
-<p style="font-size:14.5px;color:var(--mut)">한 번에 하나씩 바꿉니다. 이번에 웜스타트 하나만 바꿔 비교한 덕에 착지 선행이 해롭다는 것을 분명히 말할 수 있었습니다.</p>
+<h2>현재 결과와 다음 실험</h2>
+<p>재개한 연속 실험은 2026년 9월 24일 08:17에 완료했으며, 이후 학습을 종료했습니다. 제자리 점프 v5는 유효 점프 비율 16.1%와 신호당 낙상률 0.07%를 기록했습니다. 도약이 관측되고 낙상률도 낮았지만, 반복적으로 안정된 점프를 수행하는 단계까지 도달했다고 보기는 어렵습니다. 착지 정책에서 시작한 v6는 이번 비교에서 성능 개선을 보이지 않았습니다.</p>
+<ol class="next-steps">
+  <li><b>같은 조건에서 주행 성능 비교</b> — v5·v6를 주행 조건에서 평가해 v3와 비교합니다. 초기 정책 비교는 여러 시드로 반복해 결과의 일관성을 확인합니다.</li>
+  <li><b>커리큘럼 효과 분리</b> — 초기 정책을 고정한 상태에서 낙상 벌점의 도입 시점만 바꾸는 비교가 필요합니다. 아직 적용하지 않은 보조력 커리큘럼과 행동 스케일 조절도 각각 분리해 검토합니다.</li>
+  <li><b>초기 자세별 기립 학습</b> — 엎드린 자세와 누운 자세를 분리하고, 몸통 높이에 따라 동작 단계를 나누는 구성을 검토합니다. 자세 간 학습 간섭은 가능한 설명 중 하나이며, 현재의 성공률 0%만으로 원인을 확정할 수는 없습니다.</li>
+</ol>
+<p class="note">후속 실험에서는 한 번에 하나의 조건을 변경하고 평가 기준을 사전에 정합니다. 관측된 차이와 그 차이를 설명하는 가설을 구분해 기록할 계획입니다.</p>
 
 <footer>
-  <p>이 일지는 개인 연구 기록입니다. 상위 코드는 <a href="https://github.com/pollen-robotics/microduck_rl">pollen-robotics/microduck_rl</a>이며 그 저작권은 원저작자에게 있습니다. 여기에는 요약과 해석만 싣고 원자료·체크포인트·영상은 포함하지 않습니다.</p>
+  <p>MicroDuck의 강화학습 과정을 정리한 개인 실험 기록입니다. 기반 코드는 <a href="https://github.com/pollen-robotics/microduck_rl">pollen-robotics/microduck_rl</a>이며, 해당 코드의 저작권과 라이선스는 원저작자를 따릅니다. 이 페이지에는 실험 요약, 도표, 시뮬레이션 영상이 포함됩니다. 개별 실행의 원자료와 체크포인트는 제공하지 않습니다.</p>
 </footer>
 
 </div>
@@ -447,3 +446,4 @@ flowchart TD
 </script>
 </body>
 </html>
+
